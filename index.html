@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eğitim Oyunları</title>
+<style>
+  :root { --bg1: #0f2b5b; --bg2: #1f6fb2; --bg3: #7fc8f8; --ink: #14233a; --muted: #5b6b85; --accent: #ff9f1c; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: "Segoe UI", system-ui, sans-serif; color: #fff;
+    background: linear-gradient(180deg, var(--bg1), var(--bg2) 60%, var(--bg3)); display: flex; flex-direction: column; align-items: center; padding: 48px 16px; }
+  h1 { font-size: clamp(28px, 5vw, 44px); margin: 0 0 6px; text-shadow: 0 3px 10px rgba(0,0,0,.3); }
+  p.sub { margin: 0 0 36px; opacity: .85; text-align: center; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; width: min(900px, 100%); }
+  a.card { display: block; background: rgba(255,255,255,.95); color: var(--ink); border-radius: 18px; padding: 22px 24px; text-decoration: none;
+    box-shadow: 0 15px 40px rgba(0,0,0,.3); transition: transform .12s, box-shadow .12s; }
+  a.card:hover { transform: translateY(-4px); box-shadow: 0 22px 50px rgba(0,0,0,.35); }
+  .card .emoji { font-size: 44px; line-height: 1; }
+  .card h2 { margin: 12px 0 6px; font-size: 20px; }
+  .card p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.45; }
+  .card.soon { opacity: .55; pointer-events: none; }
+  .card .tag { display: inline-block; margin-top: 12px; font-size: 12px; font-weight: 700; color: var(--accent); }
+  footer { margin-top: auto; padding-top: 40px; font-size: 13px; opacity: .7; }
+</style>
+</head>
+<body>
+  <h1>🎓 Eğitim Oyunları</h1>
+  <p class="sub">Öğretmen soruları yazar, öğrenciler oynar, skor tablosu sınıfı yarıştırır.</p>
+  <div class="grid">
+    <a class="card" href="games/balon/">
+      <div class="emoji">🎈</div>
+      <h2>Balon Patlat</h2>
+      <p>Doğru cevap yazan balonları patlat, yanlışlara dokunma. Hız, can ve süre ayarlanabilir.</p>
+      <span class="tag">OYNA →</span>
+    </a>
+    <a class="card soon" href="#">
+      <div class="emoji">🧩</div>
+      <h2>Yeni oyunlar</h2>
+      <p>Eşleştirme, boşluk doldurma, köstebek vurma ve daha fazlası yolda.</p>
+      <span class="tag">YAKINDA</span>
+    </a>
+  </div>
+  <footer>Skorlar Supabase üzerinde tutulur. Öğrencilerden yalnızca ad ve sınıf istenir.</footer>
+</body>
+</html>

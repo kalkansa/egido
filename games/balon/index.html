@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Balon Patlat – Eğitim Oyunu</title>
+<style>
+  :root {
+    --bg1: #0f2b5b; --bg2: #1f6fb2; --bg3: #7fc8f8;
+    --card: rgba(255,255,255,.95); --ink: #14233a; --muted: #5b6b85;
+    --ok: #2ecc71; --bad: #e74c3c; --accent: #ff9f1c; --accent2: #ffbf69;
+    --radius: 18px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+    color: var(--ink);
+    background: linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 55%, var(--bg3) 100%);
+    overflow: hidden; -webkit-tap-highlight-color: transparent; user-select: none;
+  }
+  .screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  .hidden { display: none !important; }
+
+  /* ---------- Kurulum ---------- */
+  .card {
+    width: min(760px, 94vw); max-height: 94vh; overflow: auto;
+    background: var(--card); border-radius: var(--radius);
+    box-shadow: 0 25px 60px rgba(0,0,0,.35); padding: 28px 30px;
+  }
+  .card h1 { margin: 0 0 4px; font-size: 28px; letter-spacing: .3px; }
+  .card h1 span { color: var(--accent); }
+  .card .sub { margin: 0 0 20px; color: var(--muted); font-size: 14px; }
+  label { display: block; font-weight: 600; font-size: 14px; margin: 14px 0 6px; }
+  label small { font-weight: 400; color: var(--muted); }
+  input[type=text], textarea, select {
+    width: 100%; font: inherit; font-size: 15px; padding: 10px 12px;
+    border: 2px solid #d7deea; border-radius: 10px; background: #fff; color: var(--ink);
+    outline: none; transition: border-color .15s;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--bg2); }
+  textarea { min-height: 120px; resize: vertical; line-height: 1.45; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .cols.three { grid-template-columns: 1fr 1fr 1fr; }
+  @media (max-width: 640px) { .cols, .cols.three { grid-template-columns: 1fr; } }
+  .ta-ok { border-color: #bfe9cf; } .ta-ok:focus { border-color: var(--ok); }
+  .ta-bad { border-color: #f5c6c1; } .ta-bad:focus { border-color: var(--bad); }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 22px; }
+  .btn {
+    font: inherit; font-weight: 700; font-size: 16px; border: 0; cursor: pointer;
+    padding: 12px 22px; border-radius: 12px; color: #fff;
+    background: linear-gradient(180deg, var(--accent2), var(--accent));
+    box-shadow: 0 6px 0 #c76f00, 0 10px 20px rgba(0,0,0,.2);
+    transition: transform .06s, box-shadow .06s;
+  }
+  .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #c76f00, 0 4px 10px rgba(0,0,0,.2); }
+  .btn.secondary { background: linear-gradient(180deg, #8fa7c7, #5e7aa3); box-shadow: 0 6px 0 #3f5675, 0 10px 20px rgba(0,0,0,.2); }
+  .btn.secondary:active { box-shadow: 0 2px 0 #3f5675, 0 4px 10px rgba(0,0,0,.2); }
+  .btn.big { font-size: 22px; padding: 16px 40px; }
+  .err { color: var(--bad); font-size: 14px; margin-top: 10px; min-height: 18px; }
+  .hint { color: var(--muted); font-size: 13px; margin-top: 8px; }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #14233a; color: #fff;
+    padding: 10px 18px; border-radius: 10px; font-size: 14px; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 10; }
+  .toast.show { opacity: 1; }
+
+  /* ---------- Öğrenci giriş ekranı ---------- */
+  .intro { text-align: center; }
+  .intro .q { font-size: clamp(22px, 4vw, 34px); font-weight: 800; margin: 10px 0 6px; }
+  .intro .rule { color: var(--muted); font-size: 15px; margin-bottom: 22px; }
+  .intro .rule b.ok { color: var(--ok); } .intro .rule b.bad { color: var(--bad); }
+  .intro .cols { text-align: left; max-width: 520px; margin: 0 auto 18px; }
+  .intro label { margin-top: 0; }
+
+  /* ---------- Skor tablosu ---------- */
+  .lb { width: 100%; border-collapse: collapse; font-size: 14px; text-align: left; }
+  .lb th { font-size: 12px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); padding: 6px 8px; border-bottom: 2px solid #e3e8f0; }
+  .lb td { padding: 8px; border-bottom: 1px solid #eef2f7; }
+  .lb tr.me td { background: #fff4e0; font-weight: 700; }
+  .lb td.rank { width: 44px; font-weight: 800; text-align: center; }
+  .lb td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .lb .cls { display: inline-block; background: #eaf0f8; border-radius: 6px; padding: 1px 7px; font-size: 12px; margin-left: 6px; color: var(--muted); font-weight: 600; }
+  .lb-empty { color: var(--muted); font-size: 14px; padding: 18px; text-align: center; }
+  .lb-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .lb-head h2 { margin: 0; font-size: 22px; }
+  .lb-head select { width: auto; padding: 6px 10px; font-size: 14px; }
+  .lb-wrap { max-height: 50vh; overflow: auto; border: 1px solid #e3e8f0; border-radius: 12px; }
+  .myrank { font-size: 18px; font-weight: 800; margin: 4px 0 14px; color: var(--accent); }
+  #lbOverlay { position: fixed; inset: 0; background: rgba(10,20,40,.6); z-index: 7;
+    display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+  .result .lb-wrap { text-align: left; margin-bottom: 18px; }
+
+  /* ---------- Oyun ---------- */
+  #game { display: block; }
+  canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+  .hud {
+    position: absolute; top: 0; left: 0; right: 0; padding: 12px 16px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.4); pointer-events: none; z-index: 2;
+  }
+  .hud .pill {
+    background: rgba(0,0,0,.28); backdrop-filter: blur(4px); border-radius: 999px;
+    padding: 8px 16px; font-weight: 700; font-size: 16px; white-space: nowrap;
+  }
+  .hud .q { flex: 1; text-align: center; font-size: clamp(14px, 2.4vw, 22px); font-weight: 800;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hud .lives { letter-spacing: 2px; font-size: 18px; }
+  .hud .progress { font-variant-numeric: tabular-nums; }
+  .hud .pauseBtn { pointer-events: auto; cursor: pointer; }
+  .flashBad { position: fixed; inset: 0; pointer-events: none; z-index: 3;
+    box-shadow: inset 0 0 140px rgba(231,76,60,0); transition: box-shadow .35s; }
+  .flashBad.on { box-shadow: inset 0 0 140px rgba(231,76,60,.75); transition: none; }
+  #countdown { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: clamp(90px, 20vw, 200px); font-weight: 900; color: #fff; text-shadow: 0 10px 30px rgba(0,0,0,.5);
+    z-index: 5; pointer-events: none; }
+  #pauseOverlay { position: fixed; inset: 0; background: rgba(10,20,40,.6); z-index: 6;
+    display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+
+  /* ---------- Sonuç ---------- */
+  .result { text-align: center; }
+  .result .big-emoji { font-size: 72px; line-height: 1; }
+  .result h2 { font-size: 34px; margin: 10px 0 4px; }
+  .result .msg { color: var(--muted); margin-bottom: 20px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 10px 0 20px; }
+  @media (max-width: 560px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  .stat { background: #f1f5fb; border-radius: 12px; padding: 12px 8px; }
+  .stat .v { font-size: 26px; font-weight: 800; } .stat .k { font-size: 12px; color: var(--muted); }
+  .missed { text-align: left; background: #fff6f5; border: 1px solid #f5c6c1; border-radius: 12px; padding: 12px 14px; margin-bottom: 16px; font-size: 14px; }
+  .missed b { color: var(--bad); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .chip { background: #fff; border: 1px solid #e3e8f0; border-radius: 999px; padding: 4px 10px; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<!-- ===================== ÖĞRETMEN KURULUM ===================== -->
+<div id="setup" class="screen">
+  <div class="card">
+    <h1>🎈 Balon <span>Patlat</span></h1>
+    <p class="sub">Öğretmen paneli: soruyu ve cevapları yazın, oyunu başlatın ya da öğrencilere bağlantı gönderin.</p>
+
+    <label for="question">Soru / Yönerge <small>(balonların üstünde görünür)</small></label>
+    <input type="text" id="question" placeholder="Örn: Aşağıdakilerden hangileri memeli hayvandır?" maxlength="120">
+
+    <div class="cols">
+      <div>
+        <label for="correct">✅ Doğru cevaplar <small>(her satıra bir tane)</small></label>
+        <textarea id="correct" class="ta-ok" placeholder="Balina&#10;Yarasa&#10;Fil"></textarea>
+      </div>
+      <div>
+        <label for="wrong">❌ Yanlış cevaplar <small>(her satıra bir tane)</small></label>
+        <textarea id="wrong" class="ta-bad" placeholder="Köpekbalığı&#10;Penguen&#10;Timsah&#10;Kertenkele"></textarea>
+      </div>
+    </div>
+
+    <div class="cols three">
+      <div>
+        <label for="speed">Hız</label>
+        <select id="speed">
+          <option value="1">Yavaş</option>
+          <option value="2" selected>Normal</option>
+          <option value="3">Hızlı</option>
+          <option value="4">Çok hızlı</option>
+        </select>
+      </div>
+      <div>
+        <label for="lives">Can hakkı</label>
+        <select id="lives">
+          <option value="1">1</option>
+          <option value="3" selected>3</option>
+          <option value="5">5</option>
+          <option value="0">Sınırsız</option>
+        </select>
+      </div>
+      <div>
+        <label for="duration">Süre</label>
+        <select id="duration">
+          <option value="0">Süresiz</option>
+          <option value="30">30 saniye</option>
+          <option value="60" selected>60 saniye</option>
+          <option value="90">90 saniye</option>
+          <option value="120">2 dakika</option>
+        </select>
+      </div>
+    </div>
+    <p class="hint">Kazanmak için tüm doğru balonların patlatılması gerekir. Yanlış balon patlatınca bir can gider.</p>
+
+    <div class="err" id="setupErr"></div>
+    <div class="row">
+      <button class="btn" id="btnStart">▶ Oyunu Başlat</button>
+      <button class="btn secondary" id="btnShare">🔗 Öğrenci Bağlantısını Kopyala</button>
+      <button class="btn secondary" id="btnExample">Örnek doldur</button>
+      <button class="btn secondary" id="btnLbSetup">🏆 Skor Tablosu</button>
+    </div>
+    <input type="text" id="shareUrl" class="hidden" readonly style="margin-top:12px;font-size:13px;color:var(--muted)" onclick="this.select()">
+  </div>
+</div>
+
+<!-- ===================== ÖĞRENCİ GİRİŞ ===================== -->
+<div id="intro" class="screen hidden">
+  <div class="card intro">
+    <div style="font-size:60px">🎈</div>
+    <div class="q" id="introQ"></div>
+    <div class="rule">Doğru cevap yazan balonları patlat: <b class="ok">+10 puan</b>. Yanlış olanlara dokunursan <b class="bad">bir can</b> gider.</div>
+    <div class="cols">
+      <div>
+        <label for="pName">👤 Adın Soyadın</label>
+        <input type="text" id="pName" placeholder="Örn: Ayşe Yılmaz" maxlength="40" autocomplete="off">
+      </div>
+      <div>
+        <label for="pClass">🏫 Sınıfın</label>
+        <input type="text" id="pClass" placeholder="Örn: 5-A" maxlength="12" autocomplete="off" list="classList">
+        <datalist id="classList"></datalist>
+      </div>
+    </div>
+    <div class="err" id="introErr"></div>
+    <button class="btn big" id="btnIntroStart">Başla!</button>
+    <div class="row" style="justify-content:center;margin-top:14px">
+      <button class="btn secondary" id="btnLbIntro">🏆 Skor Tablosu</button>
+    </div>
+    <div class="hint" style="margin-top:16px"><a href="#" id="editLink" style="color:var(--muted)">Öğretmen misiniz? Ayarları düzenleyin</a></div>
+  </div>
+</div>
+
+<!-- ===================== OYUN ===================== -->
+<div id="game" class="screen hidden">
+  <div class="hud">
+    <div class="pill" id="hudPlayer">👤</div>
+    <div class="pill progress" id="hudScore">⭐ 0</div>
+    <div class="q" id="hudQ"></div>
+    <div class="pill progress" id="hudLeft">🎯 0/0</div>
+    <div class="pill lives" id="hudLives">❤❤❤</div>
+    <div class="pill progress" id="hudTime">⏱ 60</div>
+    <div class="pill pauseBtn" id="btnPause" title="Duraklat">⏸</div>
+  </div>
+  <canvas id="c"></canvas>
+  <div class="flashBad" id="flashBad"></div>
+  <div id="countdown" class="hidden"></div>
+  <div id="pauseOverlay" class="hidden">
+    <div class="card" style="width:auto;text-align:center">
+      <h2 style="margin-top:0">Duraklatıldı</h2>
+      <div class="row" style="justify-content:center">
+        <button class="btn" id="btnResume">▶ Devam</button>
+        <button class="btn secondary" id="btnQuit">Çıkış</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== SONUÇ ===================== -->
+<div id="result" class="screen hidden">
+  <div class="card result">
+    <div class="big-emoji" id="resEmoji">🏆</div>
+    <h2 id="resTitle">Tebrikler!</h2>
+    <p class="msg" id="resMsg"></p>
+    <div class="stats">
+      <div class="stat"><div class="v" id="rScore">0</div><div class="k">Puan</div></div>
+      <div class="stat"><div class="v" id="rCorrect">0</div><div class="k">Doğru patlatma</div></div>
+      <div class="stat"><div class="v" id="rWrong">0</div><div class="k">Yanlış patlatma</div></div>
+      <div class="stat"><div class="v" id="rTime">0 sn</div><div class="k">Süre</div></div>
+    </div>
+    <div class="missed hidden" id="missedBox">
+      <b>Patlatılmayan doğru cevaplar:</b>
+      <div class="chips" id="missedChips"></div>
+    </div>
+    <div class="myrank" id="myRank"></div>
+    <div class="lb-wrap" id="resLb"></div>
+    <div class="row" style="justify-content:center">
+      <button class="btn" id="btnAgain">🔁 Tekrar Oyna</button>
+      <button class="btn secondary" id="btnChangePlayer">👤 Oyuncu Değiştir</button>
+      <button class="btn secondary" id="btnSetup">⚙ Ayarlar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== SKOR TABLOSU ===================== -->
+<div id="lbOverlay" class="hidden">
+  <div class="card" style="width:min(640px,94vw)">
+    <div class="lb-head">
+      <h2>🏆 Skor Tablosu</h2>
+      <select id="lbClass"><option value="">Tüm sınıflar</option></select>
+    </div>
+    <div class="lb-wrap" id="lbBody"></div>
+    <div class="row">
+      <button class="btn" id="btnLbClose">Kapat</button>
+      <button class="btn secondary" id="btnLbClear">🔄 Yeni Tablo Başlat</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="../../shared/config.js"></script>
+<script>
+(() => {
+  'use strict';
+  const $ = s => document.querySelector(s);
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+  // ---------- Ekranlar ----------
+  const screens = { setup: $('#setup'), intro: $('#intro'), game: $('#game'), result: $('#result') };
+  function show(name) { for (const k in screens) screens[k].classList.toggle('hidden', k !== name); }
+  const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  // ---------- Skor deposu ----------
+  // config.js içinde Supabase bilgileri varsa skorlar Supabase'e (PostgreSQL) yazılır ve tüm
+  // cihazlarda ortak görünür. Yoksa tarayıcının yerel deposu kullanılır (yalnızca bu cihaz).
+  // Her soru seti + oturum kimliği (sid) için ayrı bir tablo anahtarı üretilir; öğretmen
+  // "Yeni Tablo Başlat" dediğinde sid yenilenir, eski skorlar silinmeden tablo sıfırlanır.
+  function hash(s) { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
+  const newSid = () => Math.random().toString(36).slice(2, 8);
+  const cmpScore = (a, b) => b.score - a.score || b.correct - a.correct || a.time - b.time || a.date - b.date;
+  const sameP = (a, b) => a.name.toLowerCase() === b.name.toLowerCase() && a.cls.toLowerCase() === b.cls.toLowerCase();
+  const GAME_ID = 'balon'; // Her oyun tipinin kendi kimliği var; skorlar bu kimlikle ayrışır
+  const setKey = cfg => GAME_ID + ':' + hash(JSON.stringify({ q: cfg.q, c: cfg.correct.slice().sort(), w: cfg.wrong.slice().sort() })) + '-' + (cfg.sid || '0');
+  // Aynı öğrencinin (ad + sınıf) yalnızca en iyi skoru gösterilir
+  function bestPerPlayer(list) {
+    const out = [];
+    for (const e of list.slice().sort(cmpScore)) if (!out.some(o => sameP(o, e))) out.push(e);
+    return out;
+  }
+
+  const LocalStore = {
+    async list(cfg) { try { return bestPerPlayer(JSON.parse(localStorage.getItem('bp_lb_' + setKey(cfg)) || '[]')); } catch (e) { return []; } },
+    async add(cfg, entry) {
+      const list = bestPerPlayer([...(await this.list(cfg)), entry]).slice(0, 500);
+      try { localStorage.setItem('bp_lb_' + setKey(cfg), JSON.stringify(list)); } catch (e) {}
+      return list;
+    },
+  };
+
+  const SB = window.BP_CONFIG || {};
+  const RemoteStore = {
+    url: (SB.supabaseUrl || '').replace(/\/$/, '') + '/rest/v1/scores',
+    headers: { apikey: SB.supabaseAnonKey, Authorization: 'Bearer ' + SB.supabaseAnonKey, 'Content-Type': 'application/json' },
+    async list(cfg) {
+      const q = `?set_key=eq.${encodeURIComponent(setKey(cfg))}&order=score.desc,correct.desc,time_sec.asc&limit=1000`;
+      const r = await fetch(this.url + q, { headers: this.headers });
+      if (!r.ok) throw new Error('Supabase ' + r.status);
+      const rows = await r.json();
+      return bestPerPlayer(rows.map(x => ({ name: x.name, cls: x.cls, score: x.score, correct: x.correct, total: x.total, wrong: x.wrong, time: x.time_sec, result: x.result, date: Date.parse(x.created_at) })));
+    },
+    async add(cfg, entry) {
+      const row = { game: GAME_ID, set_key: setKey(cfg), name: entry.name, cls: entry.cls, score: entry.score, correct: entry.correct, total: entry.total, wrong: entry.wrong, time_sec: Math.round(entry.time * 10) / 10, result: entry.result };
+      const r = await fetch(this.url, { method: 'POST', headers: Object.assign({ Prefer: 'return=minimal' }, this.headers), body: JSON.stringify(row) });
+      if (!r.ok) throw new Error('Supabase ' + r.status);
+      return this.list(cfg);
+    },
+  };
+  const Store = (SB.supabaseUrl && SB.supabaseAnonKey) ? RemoteStore : LocalStore;
+  const storeLabel = Store === RemoteStore ? 'Supabase' : 'yerel depo';
+  // Oyuncu bilgisi cihazda hatırlanır
+  let player = { name: '', cls: '' };
+  try { player = Object.assign(player, JSON.parse(localStorage.getItem('bp_player') || '{}')); } catch (e) {}
+
+  function fmtTime(s) { s = Math.round(s); return s >= 60 ? `${Math.floor(s / 60)}dk ${s % 60}sn` : `${s} sn`; }
+  function renderLb(list, me, clsFilter) {
+    const rows = list.filter(e => !clsFilter || e.cls.toLowerCase() === clsFilter.toLowerCase());
+    if (!rows.length) return '<div class="lb-empty">Henüz skor yok. İlk sen ol! 🎈</div>';
+    const medal = ['🥇', '🥈', '🥉'];
+    return `<table class="lb"><thead><tr><th></th><th>Öğrenci</th><th style="text-align:right">Puan</th><th style="text-align:right">Doğru</th><th style="text-align:right">Süre</th></tr></thead><tbody>` +
+      rows.map((e, i) => `<tr class="${me && sameP(e, me) ? 'me' : ''}">
+        <td class="rank">${medal[i] || (i + 1) + '.'}</td>
+        <td>${escapeHtml(e.name)}<span class="cls">${escapeHtml(e.cls)}</span></td>
+        <td class="num">${e.score}</td>
+        <td class="num">${e.correct}/${e.total}${e.wrong ? ` <span style="color:var(--bad)">(${e.wrong}✗)</span>` : ''}</td>
+        <td class="num">${fmtTime(e.time)}</td></tr>`).join('') + '</tbody></table>';
+  }
+  function fillClassOptions(list) {
+    const classes = [...new Set(list.map(e => e.cls))].sort((a, b) => a.localeCompare(b, 'tr', { numeric: true }));
+    $('#classList').innerHTML = classes.map(c => `<option value="${escapeHtml(c)}">`).join('');
+    const sel = $('#lbClass'), cur = sel.value;
+    sel.innerHTML = '<option value="">Tüm sınıflar</option>' + classes.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+    if (classes.includes(cur)) sel.value = cur;
+  }
+  let lbCfg = null, lbList = [];
+  async function openLeaderboard(cfg) {
+    lbCfg = cfg;
+    $('#btnLbClear').classList.toggle('hidden', !isTeacher);
+    $('#lbBody').innerHTML = '<div class="lb-empty">Yükleniyor…</div>';
+    $('#lbOverlay').classList.remove('hidden');
+    try { lbList = await Store.list(cfg); }
+    catch (e) { lbList = []; $('#lbBody').innerHTML = `<div class="lb-empty">Skor tablosu alınamadı (${storeLabel}). İnternet bağlantısını kontrol edin.</div>`; return; }
+    fillClassOptions(lbList);
+    $('#lbBody').innerHTML = renderLb(lbList, player, $('#lbClass').value);
+  }
+  $('#lbClass').onchange = () => { if (lbCfg) $('#lbBody').innerHTML = renderLb(lbList, player, $('#lbClass').value); };
+  $('#btnLbClose').onclick = () => $('#lbOverlay').classList.add('hidden');
+  // Skorlar silinmez; yeni bir oturum kimliği üretilir ve tablo sıfırdan başlar.
+  // Öğrenci bağlantısı da değiştiği için öğretmenin bağlantıyı yeniden paylaşması gerekir.
+  $('#btnLbClear').onclick = () => {
+    if (!lbCfg) return;
+    if (!confirm('Yeni, boş bir skor tablosu başlatılsın mı?\n\nEski skorlar görünmez olur ve öğrenci bağlantısı değişir; bağlantıyı yeniden kopyalayıp paylaşmanız gerekir.')) return;
+    currentSid = newSid();
+    const c = readConfig(); lbCfg = c; lbList = [];
+    history.replaceState(null, '', '#' + enc(c));
+    $('#lbBody').innerHTML = renderLb([], player, ''); fillClassOptions([]);
+    toast('Yeni skor tablosu başlatıldı. Öğrenci bağlantısını yeniden kopyalayın.');
+  };
+
+  // ---------- Ayarlar ----------
+  const parseLines = t => [...new Set(t.split('\n').map(s => s.trim()).filter(Boolean))];
+  let currentSid = ''; // skor tablosu oturumu; bağlantıyla öğrenciye taşınır
+  let isTeacher = true; // bağlantıdan gelen öğrenci için false olur
+  function readConfig() {
+    if (!currentSid) currentSid = newSid();
+    return {
+      q: $('#question').value.trim(),
+      correct: parseLines($('#correct').value),
+      wrong: parseLines($('#wrong').value),
+      speed: +$('#speed').value,
+      lives: +$('#lives').value,
+      duration: +$('#duration').value,
+      sid: currentSid,
+    };
+  }
+  function writeConfig(c) {
+    if (c.sid) currentSid = String(c.sid);
+    $('#question').value = c.q || '';
+    $('#correct').value = (c.correct || []).join('\n');
+    $('#wrong').value = (c.wrong || []).join('\n');
+    $('#speed').value = (c.speed != null ? c.speed : 2);
+    $('#lives').value = (c.lives != null ? c.lives : 3);
+    $('#duration').value = (c.duration != null ? c.duration : 60);
+  }
+  function validate(c) {
+    if (!c.correct.length) return 'En az bir doğru cevap yazmalısınız.';
+    if (!c.wrong.length) return 'En az bir yanlış cevap yazmalısınız.';
+    const lowWrong = c.wrong.map(w => w.toLowerCase());
+    const dup = c.correct.filter(x => lowWrong.includes(x.toLowerCase()));
+    if (dup.length) return 'Hem doğru hem yanlış listesinde olan cevap var: ' + dup.join(', ');
+    return '';
+  }
+  // Bağlantı paylaşımı: ayarlar URL'nin # kısmına base64 olarak yazılır
+  const enc = o => btoa(unescape(encodeURIComponent(JSON.stringify(o))));
+  const dec = s => JSON.parse(decodeURIComponent(escape(atob(s))));
+  function loadFromHash() {
+    if (location.hash.length < 2) return null;
+    try { return dec(location.hash.slice(1)); } catch (e) { return null; }
+  }
+  let toastT;
+  function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2200); }
+
+  $('#btnExample').onclick = () => writeConfig({
+    q: 'Hangileri memeli hayvandır?',
+    correct: ['Balina', 'Yarasa', 'Fil', 'Yunus', 'Kanguru'],
+    wrong: ['Köpekbalığı', 'Penguen', 'Timsah', 'Kertenkele', 'Kartal', 'Kurbağa', 'Ahtapot'],
+    speed: 2, lives: 3, duration: 60,
+  });
+  $('#btnShare').onclick = async () => {
+    const c = readConfig(); const e = validate(c);
+    if (e) { $('#setupErr').textContent = e; return; }
+    $('#setupErr').textContent = '';
+    const url = location.origin + location.pathname + '#' + enc(c);
+    history.replaceState(null, '', '#' + enc(c));
+    const box = $('#shareUrl'); box.value = url; box.classList.remove('hidden');
+    try { await navigator.clipboard.writeText(url); toast('Bağlantı kopyalandı. Öğrencilere gönderebilirsiniz.'); }
+    catch (e) { box.focus(); box.select(); toast('Bağlantıyı aşağıdaki kutudan kopyalayın.'); }
+  };
+  // Öğretmen "Başlat" dediğinde de oyuncu giriş ekranına gidilir; böylece öğretmen de kendini deneyebilir
+  async function gotoIntro(cfg) {
+    $('#introQ').textContent = cfg.q || 'Doğru balonları patlat!';
+    $('#pName').value = player.name; $('#pClass').value = player.cls; $('#introErr').textContent = '';
+    show('intro');
+    if (!player.name) $('#pName').focus();
+    fillClassOptions(await Store.list(cfg));
+  }
+  $('#btnStart').onclick = () => {
+    const c = readConfig(); const e = validate(c);
+    if (e) { $('#setupErr').textContent = e; return; }
+    $('#setupErr').textContent = '';
+    gotoIntro(c);
+  };
+  $('#btnLbSetup').onclick = () => {
+    const c = readConfig(); const e = validate(c);
+    if (e) { $('#setupErr').textContent = e; return; }
+    $('#setupErr').textContent = ''; openLeaderboard(c);
+  };
+  $('#btnLbIntro').onclick = () => openLeaderboard(readConfig());
+  $('#editLink').onclick = ev => { ev.preventDefault(); isTeacher = true; show('setup'); };
+  $('#btnIntroStart').onclick = () => {
+    const name = $('#pName').value.trim().replace(/\s+/g, ' '), cls = $('#pClass').value.trim().toUpperCase();
+    if (name.length < 2) { $('#introErr').textContent = 'Lütfen adını yaz.'; $('#pName').focus(); return; }
+    if (!cls) { $('#introErr').textContent = 'Lütfen sınıfını yaz (örn: 5-A).'; $('#pClass').focus(); return; }
+    $('#introErr').textContent = '';
+    player = { name, cls };
+    try { localStorage.setItem('bp_player', JSON.stringify(player)); } catch (e) {}
+    startGame(readConfig());
+  };
+  ['#pName', '#pClass'].forEach(s => $(s).addEventListener('keydown', e => { if (e.key === 'Enter') $('#btnIntroStart').click(); }));
+
+  // ---------- Ses (WebAudio, dosya gerektirmez) ----------
+  let actx = null;
+  function audio() {
+    if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+    if (actx && actx.state === 'suspended') actx.resume();
+    return actx;
+  }
+  function tone(freq, dur, type = 'sine', vol = .2, when = 0, slideTo = null) {
+    const a = audio(); if (!a) return;
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, a.currentTime + when);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, a.currentTime + when + dur);
+    g.gain.setValueAtTime(vol, a.currentTime + when);
+    g.gain.exponentialRampToValueAtTime(.0001, a.currentTime + when + dur);
+    o.connect(g).connect(a.destination); o.start(a.currentTime + when); o.stop(a.currentTime + when + dur + .02);
+  }
+  function popSound() { // kısa gürültü patlaması
+    const a = audio(); if (!a) return;
+    const len = Math.floor(a.sampleRate * .08), buf = a.createBuffer(1, len, a.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2);
+    const s = a.createBufferSource(), g = a.createGain(); s.buffer = buf; g.gain.value = .5;
+    s.connect(g).connect(a.destination); s.start();
+  }
+  const sfx = {
+    good() { popSound(); tone(660, .12, 'triangle', .18, 0); tone(990, .18, 'triangle', .18, .09); },
+    bad() { popSound(); tone(180, .35, 'sawtooth', .22, 0, 90); },
+    win() { [523, 659, 784, 1047].forEach((f, i) => tone(f, .25, 'triangle', .2, i * .13)); },
+    lose() { [392, 330, 262].forEach((f, i) => tone(f, .35, 'sawtooth', .15, i * .22)); },
+    tick() { tone(880, .06, 'square', .08); },
+  };
+
+  // ---------- Oyun durumu ----------
+  const canvas = $('#c'), ctx = canvas.getContext('2d');
+  let W = 0, H = 0, DPR = 1;
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = canvas.clientWidth; H = canvas.clientHeight;
+    canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  window.addEventListener('resize', () => { if (G.running) resize(); });
+
+  const PALETTE = [
+    ['#ff6b6b', '#c0392b'], ['#ffa94d', '#d35400'], ['#ffd43b', '#e0a800'], ['#69db7c', '#2b8a3e'],
+    ['#4dabf7', '#1864ab'], ['#9775fa', '#5f3dc4'], ['#f783ac', '#a61e4d'], ['#63e6be', '#099268'],
+  ];
+
+  const G = {
+    cfg: null, running: false, paused: false, balloons: [], particles: [], floaters: [],
+    score: 0, lives: 3, remaining: new Set(), onScreen: new Set(),
+    popsGood: 0, popsBad: 0, combo: 0, elapsed: 0, timeLeft: 0, spawnT: 0, last: 0, raf: 0, shakeT: 0,
+    nextColor: 0,
+  };
+
+  // Metnin balona sığacak şekilde yazı boyutu / satır bölme
+  function layoutText(text) {
+    ctx.save();
+    let size = 18, lines = [text];
+    const maxW = 110;
+    const fit = () => { ctx.font = `700 ${size}px "Segoe UI", system-ui, sans-serif`; return Math.max(...lines.map(l => ctx.measureText(l).width)); };
+    let w = fit();
+    while (w > maxW && size > 12) { size -= 1; w = fit(); }
+    if (w > maxW && text.includes(' ')) { // iki satıra böl
+      const words = text.split(' '); let best = null;
+      for (let i = 1; i < words.length; i++) {
+        lines = [words.slice(0, i).join(' '), words.slice(i).join(' ')]; size = 16; w = fit();
+        while (w > maxW && size > 11) { size -= 1; w = fit(); }
+        if (!best || w < best.w) best = { lines: lines.slice(), size, w };
+      }
+      lines = best.lines; size = best.size; w = best.w;
+    }
+    ctx.restore();
+    const rx = clamp(w / 2 + 22, 46, 95);
+    return { lines, size, rx, ry: rx * 1.18 };
+  }
+
+  function makeBalloon(text, isCorrect) {
+    const t = layoutText(text);
+    const color = PALETTE[G.nextColor++ % PALETTE.length];
+    const base = [55, 85, 120, 160][G.cfg.speed - 1];
+    const b = {
+      text, isCorrect, lines: t.lines, size: t.size, rx: t.rx, ry: t.ry, color,
+      x: 0, y: H + t.ry + 20, vy: base * rand(.85, 1.2),
+      phase: rand(0, Math.PI * 2), swayAmp: rand(10, 28), swaySpeed: rand(1.2, 2.2), rot: 0,
+    };
+    // Çakışmayan bir x bul
+    for (let tries = 0; tries < 10; tries++) {
+      b.x = rand(b.rx + 10, Math.max(b.rx + 11, W - b.rx - 10));
+      const clash = G.balloons.some(o => o.y > H - 260 && Math.abs(o.x - b.x) < o.rx + b.rx + 8);
+      if (!clash) break;
+    }
+    return b;
+  }
+
+  function spawn() {
+    const maxOnScreen = clamp(Math.round(W / 150), 4, 9);
+    if (G.balloons.length >= maxOnScreen) return;
+    const availCorrect = [...G.remaining].filter(a => !G.onScreen.has(a));
+    const availWrong = G.cfg.wrong.filter(a => !G.onScreen.has(a));
+    // Kalan doğru azaldıkça doğruyu daha sık çıkar
+    const pCorrect = G.remaining.size <= 2 ? .6 : .45;
+    let text, isCorrect;
+    if (availCorrect.length && (Math.random() < pCorrect || !availWrong.length)) { text = pick(availCorrect); isCorrect = true; }
+    else if (availWrong.length) { text = pick(availWrong); isCorrect = false; }
+    else if (availCorrect.length) { text = pick(availCorrect); isCorrect = true; }
+    else return;
+    G.onScreen.add(text);
+    G.balloons.push(makeBalloon(text, isCorrect));
+  }
+
+  function startGame(cfg) {
+    G.cfg = cfg; audio();
+    show('game'); resize();
+    Object.assign(G, {
+      running: true, paused: false, balloons: [], particles: [], floaters: [],
+      score: 0, lives: cfg.lives || Infinity, remaining: new Set(cfg.correct), onScreen: new Set(),
+      popsGood: 0, popsBad: 0, combo: 0, elapsed: 0, timeLeft: cfg.duration || Infinity, spawnT: 0, shakeT: 0,
+      nextColor: Math.floor(Math.random() * PALETTE.length),
+    });
+    $('#hudQ').textContent = cfg.q || 'Doğru balonları patlat!';
+    $('#hudPlayer').textContent = '👤 ' + player.name + (player.cls ? ' · ' + player.cls : '');
+    $('#hudTime').classList.toggle('hidden', !cfg.duration);
+    $('#hudLives').classList.toggle('hidden', !cfg.lives);
+    $('#pauseOverlay').classList.add('hidden');
+    updateHud(); draw();
+    countdown(3, () => { G.last = performance.now(); G.raf = requestAnimationFrame(loop); });
+  }
+  function countdown(n, done) {
+    const el = $('#countdown'); el.classList.remove('hidden');
+    const step = () => {
+      if (!G.running) { el.classList.add('hidden'); return; }
+      if (n === 0) { el.textContent = 'Başla!'; tone(1200, .3, 'triangle', .2); setTimeout(() => { el.classList.add('hidden'); done(); }, 500); return; }
+      el.textContent = n; sfx.tick(); n--; setTimeout(step, 700);
+    };
+    step();
+  }
+
+  function updateHud() {
+    $('#hudScore').textContent = '⭐ ' + G.score;
+    $('#hudLeft').textContent = `🎯 ${G.cfg.correct.length - G.remaining.size}/${G.cfg.correct.length}`;
+    if (G.cfg.lives) $('#hudLives').textContent = '❤'.repeat(Math.max(0, G.lives)) + '🖤'.repeat(Math.max(0, G.cfg.lives - G.lives));
+    if (G.cfg.duration) {
+      const s = Math.max(0, Math.ceil(G.timeLeft)); $('#hudTime').textContent = '⏱ ' + s;
+      $('#hudTime').style.color = s <= 10 ? '#ffd1cc' : '';
+    }
+  }
+
+  // ---------- Döngü ----------
+  function loop(now) {
+    if (!G.running) return;
+    const dt = Math.min(.05, (now - G.last) / 1000); G.last = now;
+    if (!G.paused) update(dt);
+    if (!G.running) return;
+    draw();
+    G.raf = requestAnimationFrame(loop);
+  }
+
+  function update(dt) {
+    G.elapsed += dt;
+    if (G.cfg.duration) {
+      const before = Math.ceil(G.timeLeft); G.timeLeft -= dt;
+      if (Math.ceil(G.timeLeft) !== before && G.timeLeft <= 10 && G.timeLeft > 0) sfx.tick();
+      if (G.timeLeft <= 0) { G.timeLeft = 0; updateHud(); return endGame(G.remaining.size === 0 ? 'win' : 'timeout'); }
+      updateHud();
+    }
+    const interval = [1.6, 1.25, .95, .75][G.cfg.speed - 1];
+    G.spawnT -= dt;
+    if (G.spawnT <= 0) { spawn(); G.spawnT = interval * rand(.7, 1.2); }
+
+    for (let i = G.balloons.length - 1; i >= 0; i--) {
+      const b = G.balloons[i];
+      b.y -= b.vy * dt; b.phase += b.swaySpeed * dt;
+      b.rot = Math.sin(b.phase) * .08;
+      if (b.y + b.ry + 60 < 0) { G.balloons.splice(i, 1); G.onScreen.delete(b.text); }
+    }
+    for (let i = G.particles.length - 1; i >= 0; i--) {
+      const p = G.particles[i]; p.life -= dt;
+      if (p.life <= 0) { G.particles.splice(i, 1); continue; }
+      p.vy += 500 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
+    }
+    for (let i = G.floaters.length - 1; i >= 0; i--) {
+      const f = G.floaters[i]; f.life -= dt; f.y -= 60 * dt;
+      if (f.life <= 0) G.floaters.splice(i, 1);
+    }
+    if (G.shakeT > 0) G.shakeT -= dt;
+  }
+
+  // ---------- Çizim ----------
+  function drawBalloon(b) {
+    ctx.save();
+    ctx.translate(b.x + Math.sin(b.phase) * b.swayAmp, b.y);
+    ctx.rotate(b.rot);
+    // ip
+    ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 1.5; ctx.beginPath();
+    ctx.moveTo(0, b.ry + 10);
+    ctx.bezierCurveTo(8, b.ry + 35, -8, b.ry + 55, 4, b.ry + 85); ctx.stroke();
+    // düğüm
+    ctx.fillStyle = b.color[1]; ctx.beginPath();
+    ctx.moveTo(0, b.ry - 2); ctx.lineTo(-7, b.ry + 12); ctx.lineTo(7, b.ry + 12); ctx.closePath(); ctx.fill();
+    // gövde
+    const g = ctx.createRadialGradient(-b.rx * .35, -b.ry * .4, b.rx * .1, 0, 0, b.ry);
+    g.addColorStop(0, '#ffffff'); g.addColorStop(.12, b.color[0]); g.addColorStop(1, b.color[1]);
+    ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 0, b.rx, b.ry, 0, 0, Math.PI * 2); ctx.fill();
+    // parlama
+    ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.beginPath();
+    ctx.ellipse(-b.rx * .4, -b.ry * .45, b.rx * .18, b.ry * .28, -.4, 0, Math.PI * 2); ctx.fill();
+    // metin
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `700 ${b.size}px "Segoe UI", system-ui, sans-serif`;
+    ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 4; ctx.shadowOffsetY = 1;
+    const lh = b.size * 1.15, y0 = -(b.lines.length - 1) * lh / 2;
+    b.lines.forEach((l, i) => ctx.fillText(l, 0, y0 + i * lh));
+    ctx.restore();
+  }
+
+  function drawClouds() {
+    ctx.save(); ctx.fillStyle = 'rgba(255,255,255,.08)';
+    const t = G.elapsed * 12;
+    for (let i = 0; i < 5; i++) {
+      const x = ((i * 337 + t) % (W + 300)) - 150, y = 80 + (i * 97) % Math.max(100, H * .6);
+      ctx.beginPath();
+      ctx.ellipse(x, y, 90, 30, 0, 0, Math.PI * 2);
+      ctx.ellipse(x + 50, y - 15, 60, 35, 0, 0, Math.PI * 2);
+      ctx.ellipse(x - 50, y - 5, 55, 28, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    ctx.save();
+    if (G.shakeT > 0) ctx.translate(rand(-6, 6), rand(-6, 6));
+    drawClouds();
+    for (const b of G.balloons) drawBalloon(b);
+    for (const p of G.particles) {
+      ctx.save(); ctx.globalAlpha = clamp(p.life / p.max, 0, 1); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+      ctx.fillStyle = p.color; ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * .6); ctx.restore();
+    }
+    for (const f of G.floaters) {
+      ctx.save(); ctx.globalAlpha = clamp(f.life / .9, 0, 1); ctx.fillStyle = f.color;
+      ctx.font = `900 ${f.size}px "Segoe UI", system-ui, sans-serif`; ctx.textAlign = 'center';
+      ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 8; ctx.fillText(f.text, f.x, f.y); ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  // ---------- Etkileşim ----------
+  function hit(px, py) {
+    for (let i = G.balloons.length - 1; i >= 0; i--) {
+      const b = G.balloons[i], cx = b.x + Math.sin(b.phase) * b.swayAmp;
+      const dx = (px - cx) / (b.rx + 6), dy = (py - b.y) / (b.ry + 6);
+      if (dx * dx + dy * dy <= 1) return i;
+    }
+    return -1;
+  }
+  function burst(x, y, color, n = 18) {
+    for (let i = 0; i < n; i++) {
+      const a = rand(0, Math.PI * 2), sp = rand(120, 420), life = rand(.4, .9);
+      G.particles.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 120, life, max: life, s: rand(6, 14), rot: rand(0, 6), vr: rand(-8, 8), color: Math.random() < .5 ? color[0] : color[1] });
+    }
+  }
+  function floater(text, x, y, color, size = 30) { G.floaters.push({ text, x, y, color, size, life: .9 }); }
+
+  function pop(i) {
+    const b = G.balloons.splice(i, 1)[0];
+    G.onScreen.delete(b.text);
+    const cx = b.x + Math.sin(b.phase) * b.swayAmp;
+    burst(cx, b.y, b.color);
+    if (b.isCorrect) {
+      G.combo++; const bonus = Math.min(G.combo - 1, 5) * 2; const pts = 10 + bonus;
+      G.score += pts; G.popsGood++; G.remaining.delete(b.text);
+      floater('+' + pts + (bonus ? ' 🔥' : ''), cx, b.y - 20, '#b9ffcb', bonus ? 36 : 30);
+      sfx.good();
+      if (G.remaining.size === 0) { updateHud(); return endGame('win'); }
+    } else {
+      G.combo = 0; G.popsBad++; G.score = Math.max(0, G.score - 5);
+      if (G.cfg.lives) G.lives--;
+      floater('Yanlış!', cx, b.y - 20, '#ffb3ab', 34);
+      sfx.bad(); G.shakeT = .3;
+      const fb = $('#flashBad'); fb.classList.add('on'); requestAnimationFrame(() => requestAnimationFrame(() => fb.classList.remove('on')));
+      if (G.cfg.lives && G.lives <= 0) { updateHud(); return endGame('lose'); }
+    }
+    updateHud();
+  }
+
+  canvas.addEventListener('pointerdown', e => {
+    if (!G.running || G.paused) return;
+    const r = canvas.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+    const i = hit(px, py);
+    if (i >= 0) pop(i);
+  });
+
+  // Duraklat
+  function setPaused(p) { if (!G.running) return; G.paused = p; $('#pauseOverlay').classList.toggle('hidden', !p); if (!p) G.last = performance.now(); }
+  $('#btnPause').onclick = () => setPaused(true);
+  $('#btnResume').onclick = () => setPaused(false);
+  $('#btnQuit').onclick = () => { setPaused(false); endGame('quit'); };
+  document.addEventListener('keydown', e => { if (G.running && (e.key === 'Escape' || e.key === 'p' || e.key === 'P')) setPaused(!G.paused); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && G.running) setPaused(true); });
+
+  // ---------- Bitiş ----------
+  function endGame(kind) {
+    G.running = false; cancelAnimationFrame(G.raf);
+    $('#pauseOverlay').classList.add('hidden');
+    const total = G.cfg.correct.length, got = total - G.remaining.size;
+    const el = { emoji: $('#resEmoji'), title: $('#resTitle'), msg: $('#resMsg') };
+    if (kind === 'win') {
+      el.emoji.textContent = G.popsBad === 0 ? '🏆' : '🎉'; el.title.textContent = G.popsBad === 0 ? 'Mükemmel!' : 'Tebrikler!';
+      el.msg.textContent = G.popsBad === 0 ? 'Tüm doğru balonları hiç hata yapmadan patlattın.' : `Tüm doğru balonları patlattın, ${G.popsBad} yanlış patlatma oldu.`;
+      sfx.win();
+    } else if (kind === 'lose') {
+      el.emoji.textContent = '💥'; el.title.textContent = 'Canların bitti';
+      el.msg.textContent = `${total} doğru cevaptan ${got} tanesini bulabildin. Tekrar dene!`; sfx.lose();
+    } else if (kind === 'timeout') {
+      el.emoji.textContent = '⏰'; el.title.textContent = 'Süre doldu';
+      el.msg.textContent = `${total} doğru cevaptan ${got} tanesini patlattın.`; sfx.lose();
+    } else {
+      el.emoji.textContent = '🚪'; el.title.textContent = 'Oyundan çıkıldı'; el.msg.textContent = '';
+    }
+    $('#rScore').textContent = G.score; $('#rCorrect').textContent = `${got}/${total}`;
+    $('#rWrong').textContent = G.popsBad; $('#rTime').textContent = Math.round(G.elapsed) + ' sn';
+    const missed = [...G.remaining];
+    $('#missedBox').classList.toggle('hidden', !missed.length);
+    $('#missedChips').innerHTML = missed.map(m => `<span class="chip">${escapeHtml(m)}</span>`).join('');
+    show('result');
+    saveAndShowRank(kind, got, total);
+  }
+  async function saveAndShowRank(kind, got, total) {
+    $('#myRank').textContent = ''; $('#resLb').innerHTML = '';
+    if (kind === 'quit') return; // yarım bırakılan oyun tabloya yazılmaz
+    const entry = { name: player.name, cls: player.cls, score: G.score, correct: got, total, wrong: G.popsBad, time: G.elapsed, result: kind, date: Date.now() };
+    $('#myRank').textContent = 'Skor kaydediliyor…';
+    let list;
+    try { list = await Store.add(G.cfg, entry); }
+    catch (e) { $('#myRank').textContent = ''; $('#resLb').innerHTML = `<div class="lb-empty">Skor kaydedilemedi (${storeLabel}). İnternet bağlantısını kontrol edin.</div>`; return; }
+    // Uzak depo tarih bilgisini kendisi üretir; bu turun satırını skor+süre ile eşleştir
+    const mine = list.find(e => sameP(e, entry) && e.score === entry.score && Math.abs(e.time - entry.time) < 1) || list.find(e => sameP(e, entry));
+    if (mine) entry.date = mine.date;
+    const idx = list.findIndex(e => sameP(e, entry));
+    if (idx >= 0) {
+      const best = list[idx];
+      $('#myRank').textContent = best.date === entry.date
+        ? `Sıralaman: ${idx + 1}. / ${list.length}`
+        : `En iyi skorun ${best.score} puan (${idx + 1}. sıra). Bu tur: ${entry.score} puan.`;
+    }
+    $('#resLb').innerHTML = renderLb(list.slice(0, 10), entry, '');
+    if (idx >= 10) $('#resLb').innerHTML += `<div class="lb-empty" style="padding:8px">… ${idx + 1}. sırada sen varsın</div>`;
+  }
+  $('#btnAgain').onclick = () => startGame(G.cfg);
+  $('#btnChangePlayer').onclick = () => gotoIntro(G.cfg);
+  $('#btnSetup').onclick = () => show('setup');
+
+  // ---------- Başlangıç ----------
+  const fromLink = loadFromHash();
+  if (fromLink && Array.isArray(fromLink.correct) && fromLink.correct.length) {
+    writeConfig(fromLink);
+    isTeacher = false;
+    gotoIntro(readConfig());
+  } else {
+    show('setup');
+  }
+})();
+</script>
+</body>
+</html>
