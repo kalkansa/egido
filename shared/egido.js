@@ -253,7 +253,8 @@ window.Egido = (() => {
     setErr('');
     if (!remote) { showSharePanel('', location.origin + location.pathname + '#' + enc(c)); return; }
     const saved = await saveSet({ silent: true }); // kod, kayıtlı oyuna bağlıdır
-    if (saved) showSharePanel(saved.code, ROOT_URL + '#' + saved.code);
+    // QR ve bağlantı doğrudan oyuna gider; ana sayfa yalnızca kodu elle yazanlar için
+    if (saved) showSharePanel(saved.code, location.origin + location.pathname + '?k=' + saved.code);
   }
 
   // ---------- Skor tablosu ----------
@@ -442,7 +443,9 @@ window.Egido = (() => {
 
   function renderUser() {
     const el = $('#tbUser'); if (!el) return;
-    el.innerHTML = session ? `${escapeHtml(session.user.email.replace('@' + (SB.userDomain || 'egido.local'), ''))} · <a href="#" id="tbLogout">${t('tbar.logout')}</a>` : `<a href="${ROOT_URL}">${t('tbar.login')}</a>`;
+    el.innerHTML = session
+      ? `👤 ${escapeHtml(session.user.email.replace('@' + (SB.userDomain || 'egido.local'), ''))} <button class="btn small logout" id="tbLogout">⏻ ${t('tbar.logout')}</button>`
+      : `<a href="${ROOT_URL}">${t('tbar.login')}</a>`;
     const lo = $('#tbLogout'); if (lo) lo.onclick = async ev => { ev.preventDefault(); await sb.auth.signOut(); location.href = ROOT_URL; };
   }
 

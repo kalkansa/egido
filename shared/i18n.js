@@ -3,7 +3,7 @@
 // Dil seçimi: ?lang=xx › localStorage › tarayıcı dili › tr. Öğretmenin dili oyun ayarına yazılır, öğrenci o dille açar.
 window.I18N = (() => {
   'use strict';
-  const LANGS = [['tr', 'Türkçe'], ['en', 'English'], ['de', 'Deutsch'], ['es', 'Español']];
+  const LANGS = [['tr', '🇹🇷 Türkçe'], ['en', '🇬🇧 English'], ['de', '🇩🇪 Deutsch'], ['es', '🇪🇸 Español']];
   const D = {
   tr: {
     // ortak

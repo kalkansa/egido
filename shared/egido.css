@@ -55,6 +55,8 @@ textarea { min-height: 120px; resize: vertical; line-height: 1.45; }
 .btn.small { font-size: 13px; padding: 7px 12px; border-radius: 9px; box-shadow: 0 3px 0 #3f5675; }
 .btn.small:active { transform: translateY(2px); box-shadow: 0 1px 0 #3f5675; }
 .btn.big { font-size: 22px; padding: 16px 40px; }
+.btn.logout { background: linear-gradient(180deg, #ff8a80, var(--bad)); box-shadow: 0 3px 0 #a93226; margin-left: 8px; }
+.btn.logout:active { box-shadow: 0 1px 0 #a93226; }
 .err { color: var(--bad); font-size: 14px; margin-top: 10px; min-height: 18px; }
 .hint { color: var(--muted); font-size: 13px; margin-top: 8px; }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #14233a; color: #fff;

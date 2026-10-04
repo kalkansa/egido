@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Egido</title>
 <link rel="icon" type="image/svg+xml" href="shared/logo.svg">
-<link rel="stylesheet" href="shared/egido.css?v=202610042128">
+<link rel="stylesheet" href="shared/egido.css?v=202610042149">
 <style>
   body { overflow: auto; user-select: text; display: flex; flex-direction: column; align-items: center; padding: 36px 16px; min-height: 100vh; color: #fff; }
   h1 { font-size: clamp(28px, 5vw, 44px); margin: 0 0 6px; text-shadow: 0 3px 10px rgba(0,0,0,.3); }
@@ -76,7 +76,7 @@
   <div class="dash hidden" id="dash">
     <div class="dash-head">
       <h2 style="margin:0" data-i18n="home.myGames"></h2>
-      <div class="who"><span id="who"></span> · <a href="#" id="logout" data-i18n="tbar.logout"></a></div>
+      <div class="who">👤 <span id="who"></span> <button class="btn small logout" id="logout"><span>⏻ </span><span data-i18n="tbar.logout"></span></button></div>
     </div>
     <div class="newgames" id="newgames"></div>
     <div class="mylist">
@@ -87,9 +87,9 @@
 
   <footer data-i18n="home.footer"></footer>
 
-<script src="shared/config.js?v=202610042128"></script>
+<script src="shared/config.js?v=202610042149"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="shared/i18n.js?v=202610042128"></script>
+<script src="shared/i18n.js?v=202610042149"></script>
 <script>
 (() => {
   const $ = s => document.querySelector(s);
@@ -126,10 +126,14 @@
       const { data, error } = await sb.rpc('join_set', { p_code: code });
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
-      if (!row) { err.textContent = t('home.codeNotFound'); return; }
+      if (!row) { err.textContent = t('home.codeNotFound'); showGuest(); return; }
       location.href = `games/${encodeURIComponent(row.game)}/?k=${code}`;
-    } catch (e) { err.textContent = t('home.netFail'); }
+    } catch (e) { err.textContent = t('home.netFail'); showGuest(); }
     finally { btn.disabled = false; btn.textContent = t('home.join'); }
+  }
+  function showGuest() { // kodla gelen öğrencide hata olursa formlar geri gelsin
+    const sp = $('#joining'); if (sp) sp.remove();
+    $('#guest').classList.remove('hidden');
   }
   $('#joinForm').addEventListener('submit', e => { e.preventDefault(); join($('#code').value); });
   $('#code').addEventListener('input', e => { const v = norm(e.target.value); if (v !== e.target.value) e.target.value = v; });
@@ -152,7 +156,7 @@
   // ---------- Öğretmen paneli ----------
   async function render() {
     const session = remote ? (await sb.auth.getSession()).data.session : null;
-    $('#guest').classList.toggle('hidden', !!session);
+    $('#guest').classList.toggle('hidden', !!session || !!$('#joining')); // kodla yönlendirme sürerken formlar gizli kalır
     $('#dash').classList.toggle('hidden', !session);
     if (!session) return;
     $('#who').textContent = session.user.email.replace('@' + USER_DOMAIN, '');
@@ -179,9 +183,14 @@
     });
   }
 
-  // QR / kısa bağlantıdan gelen öğrenci: egido/#KALE7
+  // Kısa bağlantıdan gelen öğrenci: egido/#KALE7 → giriş formu gösterilmeden doğrudan oyuna yönlendirilir
   const h = location.hash.replace('#', '');
-  if (h) { $('#code').value = norm(h); join(h); }
+  if (h) {
+    $('#guest').classList.add('hidden');
+    const sp = document.createElement('div'); sp.id = 'joining'; sp.className = 'panel'; sp.style.cssText = 'text-align:center;font-size:18px;font-weight:700;width:min(420px,100%)';
+    sp.textContent = t('home.searching'); document.querySelector('h1').after(sp);
+    $('#code').value = norm(h); join(h);
+  }
   render();
 })();
 </script>
