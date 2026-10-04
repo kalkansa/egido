@@ -35,6 +35,29 @@ create policy "anon skor okur"
   to anon
   using (true);
 
+-- Oyun kodları: öğretmenin soru seti 5 harflik bir kodla (örn. KALE7) saklanır.
+-- Öğrenci ana sayfada kodu yazar ya da QR okutur; uzun bağlantı gerekmez.
+create table if not exists public.sets (
+  code        text        primary key check (code ~ '^[A-Z2-9]{5}$'),
+  game        text        not null check (char_length(game) between 1 and 32),
+  config      jsonb       not null check (pg_column_size(config) < 20000),
+  created_at  timestamptz not null default now()
+);
+
+alter table public.sets enable row level security;
+
+drop policy if exists "anon kod ekler" on public.sets;
+create policy "anon kod ekler"
+  on public.sets for insert
+  to anon
+  with check (true);
+
+drop policy if exists "anon kod okur" on public.sets;
+create policy "anon kod okur"
+  on public.sets for select
+  to anon
+  using (true);
+
 -- Not: Ders bitince skorların önemi kalmıyor. Eski kayıtları temizlemek için
 -- SQL Editor'da şunu çalıştırabilirsiniz:
 --   delete from public.scores where created_at < now() - interval '90 days';

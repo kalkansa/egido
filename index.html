@@ -5,12 +5,29 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Eğitim Oyunları</title>
 <style>
-  :root { --bg1: #0f2b5b; --bg2: #1f6fb2; --bg3: #7fc8f8; --ink: #14233a; --muted: #5b6b85; --accent: #ff9f1c; }
+  :root { --bg1: #0f2b5b; --bg2: #1f6fb2; --bg3: #7fc8f8; --ink: #14233a; --muted: #5b6b85; --accent: #ff9f1c; --accent2: #ffbf69; --bad: #e74c3c; }
   * { box-sizing: border-box; }
   body { margin: 0; min-height: 100vh; font-family: "Segoe UI", system-ui, sans-serif; color: #fff;
-    background: linear-gradient(180deg, var(--bg1), var(--bg2) 60%, var(--bg3)); display: flex; flex-direction: column; align-items: center; padding: 48px 16px; }
+    background: linear-gradient(180deg, var(--bg1), var(--bg2) 60%, var(--bg3)); display: flex; flex-direction: column; align-items: center; padding: 40px 16px; }
   h1 { font-size: clamp(28px, 5vw, 44px); margin: 0 0 6px; text-shadow: 0 3px 10px rgba(0,0,0,.3); }
-  p.sub { margin: 0 0 36px; opacity: .85; text-align: center; }
+  p.sub { margin: 0 0 28px; opacity: .85; text-align: center; }
+
+  /* Öğrenci: kod ile katıl */
+  .join { width: min(520px, 100%); background: rgba(255,255,255,.95); color: var(--ink); border-radius: 18px; padding: 24px; margin-bottom: 36px;
+    box-shadow: 0 15px 40px rgba(0,0,0,.3); text-align: center; }
+  .join h2 { margin: 0 0 4px; font-size: 22px; }
+  .join p { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
+  .join form { display: flex; gap: 10px; }
+  .join input { flex: 1; font: inherit; font-size: 30px; font-weight: 800; letter-spacing: .35em; text-align: center; text-transform: uppercase;
+    padding: 10px 6px 10px 14px; border: 2px solid #d7deea; border-radius: 12px; outline: none; color: var(--ink); min-width: 0; }
+  .join input:focus { border-color: var(--bg2); }
+  .btn { font: inherit; font-weight: 700; font-size: 18px; border: 0; cursor: pointer; padding: 12px 24px; border-radius: 12px; color: #fff;
+    background: linear-gradient(180deg, var(--accent2), var(--accent)); box-shadow: 0 6px 0 #c76f00, 0 10px 20px rgba(0,0,0,.2); white-space: nowrap; }
+  .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #c76f00; }
+  .btn[disabled] { opacity: .6; cursor: wait; }
+  .err { color: var(--bad); font-size: 14px; min-height: 18px; margin-top: 10px; }
+
+  .teacher { font-size: 14px; opacity: .85; margin-bottom: 14px; }
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; width: min(900px, 100%); }
   a.card { display: block; background: rgba(255,255,255,.95); color: var(--ink); border-radius: 18px; padding: 22px 24px; text-decoration: none;
     box-shadow: 0 15px 40px rgba(0,0,0,.3); transition: transform .12s, box-shadow .12s; }
@@ -20,18 +37,30 @@
   .card p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.45; }
   .card.soon { opacity: .55; pointer-events: none; }
   .card .tag { display: inline-block; margin-top: 12px; font-size: 12px; font-weight: 700; color: var(--accent); }
-  footer { margin-top: auto; padding-top: 40px; font-size: 13px; opacity: .7; }
+  footer { margin-top: auto; padding-top: 40px; font-size: 13px; opacity: .7; text-align: center; }
 </style>
 </head>
 <body>
   <h1>🎓 Eğitim Oyunları</h1>
-  <p class="sub">Öğretmen soruları yazar, öğrenciler oynar, skor tablosu sınıfı yarıştırır.</p>
+  <p class="sub">Öğretmenin verdiği kodu yaz, oyuna katıl.</p>
+
+  <div class="join">
+    <h2>🎟 Oyun Kodu</h2>
+    <p>Öğretmeninin tahtaya yazdığı 5 harfli kodu gir.</p>
+    <form id="joinForm" autocomplete="off">
+      <input type="text" id="code" maxlength="5" placeholder="KALE7" inputmode="latin" autocapitalize="characters" spellcheck="false" aria-label="Oyun kodu">
+      <button class="btn" id="joinBtn" type="submit">Katıl</button>
+    </form>
+    <div class="err" id="joinErr"></div>
+  </div>
+
+  <div class="teacher">Öğretmen misiniz? Bir oyun seçip soruları yazın:</div>
   <div class="grid">
     <a class="card" href="games/balon/">
       <div class="emoji">🎈</div>
       <h2>Balon Patlat</h2>
       <p>Doğru cevap yazan balonları patlat, yanlışlara dokunma. Hız, can ve süre ayarlanabilir.</p>
-      <span class="tag">OYNA →</span>
+      <span class="tag">OYUN KUR →</span>
     </a>
     <a class="card soon" href="#">
       <div class="emoji">🧩</div>
@@ -40,6 +69,45 @@
       <span class="tag">YAKINDA</span>
     </a>
   </div>
-  <footer>Skorlar Supabase üzerinde tutulur. Öğrencilerden yalnızca ad ve sınıf istenir.</footer>
+  <footer>Öğrencilerden yalnızca ad ve sınıf istenir. Skorlar ders için tutulur.</footer>
+
+<script src="shared/config.js"></script>
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const SB = window.BP_CONFIG || {};
+  const remote = !!(SB.supabaseUrl && SB.supabaseAnonKey);
+  const codeRe = /^[A-Z2-9]{5}$/;
+  // Türkçe karakterleri ve karışabilecek harfleri normalize et
+  const norm = s => s.toUpperCase().replace(/İ/g, 'I').replace(/Ğ/g, 'G').replace(/Ü/g, 'U').replace(/Ş/g, 'S').replace(/Ö/g, 'O').replace(/Ç/g, 'C')
+    .replace(/[^A-Z0-9]/g, '').replace(/0/g, 'O').replace(/1/g, 'I');
+
+  async function join(code) {
+    const err = $('#joinErr'), btn = $('#joinBtn');
+    code = norm(code);
+    if (!codeRe.test(code)) { err.textContent = 'Kod 5 karakter olmalı (harf ve 2-9 arası rakam).'; return; }
+    if (!remote) { err.textContent = 'Oyun kodları henüz etkin değil. Öğretmeninin gönderdiği bağlantıyı kullan.'; return; }
+    err.textContent = ''; btn.disabled = true; btn.textContent = 'Aranıyor…';
+    try {
+      const u = SB.supabaseUrl.replace(/\/$/, '') + `/rest/v1/sets?code=eq.${code}&select=game`;
+      const r = await fetch(u, { headers: { apikey: SB.supabaseAnonKey, Authorization: 'Bearer ' + SB.supabaseAnonKey } });
+      if (!r.ok) throw new Error(r.status);
+      const rows = await r.json();
+      if (!rows.length) { err.textContent = 'Bu kodla bir oyun bulunamadı. Kodu kontrol et.'; return; }
+      location.href = `games/${encodeURIComponent(rows[0].game)}/?k=${code}`;
+    } catch (e) {
+      err.textContent = 'Bağlantı hatası. İnterneti kontrol edip tekrar dene.';
+    } finally { btn.disabled = false; btn.textContent = 'Katıl'; }
+  }
+
+  $('#joinForm').addEventListener('submit', e => { e.preventDefault(); join($('#code').value); });
+  $('#code').addEventListener('input', e => { const v = norm(e.target.value); if (v !== e.target.value) e.target.value = v; });
+
+  // QR koddan ya da kısa bağlantıdan gelen: egido/#KALE7
+  const h = location.hash.replace('#', '');
+  if (h) { $('#code').value = norm(h); join(h); }
+  else $('#code').focus();
+})();
+</script>
 </body>
 </html>

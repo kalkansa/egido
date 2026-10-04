@@ -63,6 +63,23 @@
     padding: 10px 18px; border-radius: 10px; font-size: 14px; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 10; }
   .toast.show { opacity: 1; }
 
+  /* ---------- Kod paylaşım paneli ---------- */
+  .share { display: flex; gap: 22px; align-items: center; margin-top: 18px; padding: 18px 20px; background: #f1f5fb; border-radius: 14px; }
+  @media (max-width: 640px) { .share { flex-direction: column; } }
+  .share-left { flex: 1; min-width: 0; }
+  .share-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-weight: 700; }
+  .share-code { font-size: 56px; font-weight: 900; letter-spacing: .18em; line-height: 1.1; color: var(--ink); font-family: Consolas, "Segoe UI", monospace; }
+  .share-join { font-size: 15px; color: var(--muted); margin: 4px 0 10px; }
+  .share-join b { color: var(--ink); }
+  .share input { font-size: 12px; color: var(--muted); padding: 6px 10px; }
+  .share-qr { flex: 0 0 auto; }
+  #qr img, #qr canvas { display: block; border: 6px solid #fff; border-radius: 10px; }
+  #bigShare { position: fixed; inset: 0; z-index: 8; background: #fff; color: var(--ink); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px; }
+  .big-label { font-size: clamp(18px, 3vw, 28px); color: var(--muted); }
+  .big-join { font-size: clamp(20px, 3.5vw, 34px); font-weight: 700; }
+  .big-code { font-size: clamp(80px, 18vw, 200px); font-weight: 900; letter-spacing: .15em; line-height: 1; font-family: Consolas, "Segoe UI", monospace; margin: 8px 0 18px; }
+  #bigQr img, #bigQr canvas { display: block; }
+
   /* ---------- Öğrenci giriş ekranı ---------- */
   .intro { text-align: center; }
   .intro .q { font-size: clamp(22px, 4vw, 34px); font-weight: 800; margin: 10px 0 6px; }
@@ -187,12 +204,35 @@
     <div class="err" id="setupErr"></div>
     <div class="row">
       <button class="btn" id="btnStart">▶ Oyunu Başlat</button>
-      <button class="btn secondary" id="btnShare">🔗 Öğrenci Bağlantısını Kopyala</button>
+      <button class="btn secondary" id="btnShare">🎟 Öğrenci Kodu Oluştur</button>
       <button class="btn secondary" id="btnExample">Örnek doldur</button>
       <button class="btn secondary" id="btnLbSetup">🏆 Skor Tablosu</button>
     </div>
-    <input type="text" id="shareUrl" class="hidden" readonly style="margin-top:12px;font-size:13px;color:var(--muted)" onclick="this.select()">
+
+    <!-- Öğrencilere gösterilecek kod + QR. Tahtaya yansıtılır. -->
+    <div id="sharePanel" class="share hidden">
+      <div class="share-left">
+        <div class="share-label">Oyun kodu</div>
+        <div class="share-code" id="shareCode">—</div>
+        <div class="share-join" id="shareJoin"></div>
+        <input type="text" id="shareUrl" readonly onclick="this.select()" title="Doğrudan bağlantı">
+        <div class="row" style="margin-top:10px">
+          <button class="btn secondary" id="btnCopyUrl">Bağlantıyı Kopyala</button>
+          <button class="btn secondary" id="btnBigShare">⛶ Tam Ekran Göster</button>
+        </div>
+      </div>
+      <div class="share-qr"><div id="qr"></div><div class="hint" style="text-align:center;margin-top:6px">Tabletin kamerasıyla okut</div></div>
+    </div>
   </div>
+</div>
+
+<!-- Tahtaya yansıtmak için büyük kod + QR -->
+<div id="bigShare" class="hidden">
+  <div class="big-label">Oyuna katılmak için</div>
+  <div class="big-join" id="bigJoin"></div>
+  <div class="big-code" id="bigCode"></div>
+  <div id="bigQr"></div>
+  <button class="btn secondary" id="btnBigClose">Kapat</button>
 </div>
 
 <!-- ===================== ÖĞRENCİ GİRİŞ ===================== -->
@@ -290,6 +330,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="../../shared/config.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 (() => {
   'use strict';
@@ -391,12 +432,13 @@
   // Öğrenci bağlantısı da değiştiği için öğretmenin bağlantıyı yeniden paylaşması gerekir.
   $('#btnLbClear').onclick = () => {
     if (!lbCfg) return;
-    if (!confirm('Yeni, boş bir skor tablosu başlatılsın mı?\n\nEski skorlar görünmez olur ve öğrenci bağlantısı değişir; bağlantıyı yeniden kopyalayıp paylaşmanız gerekir.')) return;
+    if (!confirm('Yeni, boş bir skor tablosu başlatılsın mı?\n\nEski skorlar görünmez olur ve öğrenci kodu değişir; "Öğrenci Kodu Oluştur" ile yeni kodu alıp paylaşmanız gerekir.')) return;
     currentSid = newSid();
     const c = readConfig(); lbCfg = c; lbList = [];
     history.replaceState(null, '', '#' + enc(c));
+    $('#sharePanel').classList.add('hidden'); currentCode = '';
     $('#lbBody').innerHTML = renderLb([], player, ''); fillClassOptions([]);
-    toast('Yeni skor tablosu başlatıldı. Öğrenci bağlantısını yeniden kopyalayın.');
+    toast('Yeni skor tablosu başlatıldı. Yeni öğrenci kodu oluşturun.');
   };
 
   // ---------- Ayarlar ----------
@@ -448,16 +490,79 @@
     wrong: ['Köpekbalığı', 'Penguen', 'Timsah', 'Kertenkele', 'Kartal', 'Kurbağa', 'Ahtapot'],
     speed: 2, lives: 3, duration: 60,
   });
+  // ---------- Oyun kodu (Supabase `sets` tablosu) ----------
+  // Soru seti 5 harflik bir kodla saklanır; öğrenci ana sayfada kodu yazar ya da QR okutur.
+  const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 0/O ve 1/I karışmasın diye çıkarıldı
+  const randomCode = () => Array.from({ length: 5 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join('');
+  const Sets = {
+    url: (SB.supabaseUrl || '').replace(/\/$/, '') + '/rest/v1/sets',
+    async create(cfg) {
+      for (let i = 0; i < 6; i++) {
+        const code = randomCode();
+        const r = await fetch(this.url, { method: 'POST', headers: Object.assign({ Prefer: 'return=minimal' }, RemoteStore.headers), body: JSON.stringify({ code, game: GAME_ID, config: cfg }) });
+        if (r.ok) return code;
+        if (r.status !== 409) throw new Error('Supabase ' + r.status); // 409 = kod çakıştı, yeniden dene
+      }
+      throw new Error('Kod üretilemedi');
+    },
+    async get(code) {
+      const r = await fetch(this.url + `?code=eq.${encodeURIComponent(code)}&game=eq.${GAME_ID}&select=config`, { headers: RemoteStore.headers });
+      if (!r.ok) throw new Error('Supabase ' + r.status);
+      const rows = await r.json();
+      return rows.length ? rows[0].config : null;
+    },
+  };
+  const ROOT_URL = location.origin + location.pathname.replace(/games\/[^/]+\/?(index\.html)?$/, ''); // ana sayfa
+  const shortJoin = ROOT_URL.replace(/^https?:\/\//, '').replace(/\/$/, ''); // tahtaya yazılacak kısa adres
+  const codeCache = {}; // aynı soru seti için tekrar tekrar kod üretme
+  let currentCode = '';
+
+  function drawQr(el, text, size) {
+    el.innerHTML = '';
+    if (typeof QRCode === 'undefined') { el.innerHTML = '<div class="hint">QR kütüphanesi yüklenemedi</div>'; return; }
+    new QRCode(el, { text, width: size, height: size, correctLevel: QRCode.CorrectLevel.M });
+  }
+  function showSharePanel(code, url) {
+    currentCode = code;
+    $('#shareCode').textContent = code || '—';
+    $('#shareJoin').innerHTML = code
+      ? `Öğrenciler <b>${escapeHtml(shortJoin)}</b> adresine girip kodu yazar ya da QR okutur.`
+      : 'Oyun kodları için Supabase bağlantısı gerekir; şimdilik yalnızca bağlantı ve QR kullanılabilir.';
+    $('#shareUrl').value = url;
+    drawQr($('#qr'), url, 180);
+    $('#sharePanel').classList.remove('hidden');
+    $('#sharePanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
   $('#btnShare').onclick = async () => {
     const c = readConfig(); const e = validate(c);
     if (e) { $('#setupErr').textContent = e; return; }
     $('#setupErr').textContent = '';
-    const url = location.origin + location.pathname + '#' + enc(c);
     history.replaceState(null, '', '#' + enc(c));
-    const box = $('#shareUrl'); box.value = url; box.classList.remove('hidden');
-    try { await navigator.clipboard.writeText(url); toast('Bağlantı kopyalandı. Öğrencilere gönderebilirsiniz.'); }
-    catch (e) { box.focus(); box.select(); toast('Bağlantıyı aşağıdaki kutudan kopyalayın.'); }
+    if (Store !== RemoteStore) { // Supabase yoksa eski yöntem: tüm ayarlar bağlantının içinde
+      showSharePanel('', location.origin + location.pathname + '#' + enc(c));
+      return;
+    }
+    const key = setKey(c);
+    try {
+      $('#btnShare').disabled = true; $('#btnShare').textContent = 'Kod üretiliyor…';
+      if (!codeCache[key]) codeCache[key] = await Sets.create(c);
+      showSharePanel(codeCache[key], ROOT_URL + '#' + codeCache[key]);
+    } catch (err) {
+      $('#setupErr').textContent = 'Oyun kodu üretilemedi. İnternet bağlantısını kontrol edin.';
+    } finally { $('#btnShare').disabled = false; $('#btnShare').textContent = '🎟 Öğrenci Kodu Oluştur'; }
   };
+  $('#btnCopyUrl').onclick = async () => {
+    const url = $('#shareUrl').value;
+    try { await navigator.clipboard.writeText(url); toast('Bağlantı kopyalandı.'); }
+    catch (e) { $('#shareUrl').focus(); $('#shareUrl').select(); toast('Bağlantıyı kutudan kopyalayın.'); }
+  };
+  $('#btnBigShare').onclick = () => {
+    $('#bigJoin').textContent = currentCode ? shortJoin : 'QR kodu okut';
+    $('#bigCode').textContent = currentCode;
+    drawQr($('#bigQr'), $('#shareUrl').value, Math.min(360, Math.floor(window.innerHeight * .45)));
+    $('#bigShare').classList.remove('hidden');
+  };
+  $('#btnBigClose').onclick = () => $('#bigShare').classList.add('hidden');
   // Öğretmen "Başlat" dediğinde de oyuncu giriş ekranına gidilir; böylece öğretmen de kendini deneyebilir
   async function gotoIntro(cfg) {
     $('#introQ').textContent = cfg.q || 'Doğru balonları patlat!';
@@ -844,8 +949,18 @@
   $('#btnSetup').onclick = () => show('setup');
 
   // ---------- Başlangıç ----------
+  const validCfg = c => c && Array.isArray(c.correct) && c.correct.length && Array.isArray(c.wrong);
+  const joinCode = (new URLSearchParams(location.search).get('k') || '').toUpperCase();
   const fromLink = loadFromHash();
-  if (fromLink && Array.isArray(fromLink.correct) && fromLink.correct.length) {
+  if (joinCode && Store === RemoteStore) {
+    // Öğrenci oyun koduyla geldi: soru setini Supabase'den al
+    isTeacher = false;
+    $('#introQ').textContent = 'Oyun yükleniyor…'; $('#btnIntroStart').disabled = true; show('intro');
+    Sets.get(joinCode).then(cfg => {
+      if (!validCfg(cfg)) { $('#introQ').textContent = 'Bu kodla oyun bulunamadı'; $('#introErr').textContent = 'Kodu kontrol edip ana sayfadan tekrar dene.'; return; }
+      writeConfig(cfg); $('#btnIntroStart').disabled = false; gotoIntro(readConfig());
+    }).catch(() => { $('#introQ').textContent = 'Oyun yüklenemedi'; $('#introErr').textContent = 'İnternet bağlantısını kontrol edip sayfayı yenile.'; });
+  } else if (validCfg(fromLink)) {
     writeConfig(fromLink);
     isTeacher = false;
     gotoIntro(readConfig());

@@ -45,6 +45,15 @@ güncelleyemez ve silemez.
    Source: **Deploy from a branch**, Branch: **main**, Folder: **/ (root)** → Save.
 4. Bir iki dakika sonra `https://<kullanıcı>.github.io/egido/` yayında olur.
 
+## Öğrenciler nasıl katılır
+
+1. Öğretmen soru setini yazıp **Öğrenci Kodu Oluştur** der. Panelde 5 harflik kod (örn. `KALE7`), QR kod ve kısa bağlantı çıkar. **Tam Ekran Göster** ile tahtaya yansıtılır.
+2. Öğrenci ya tabletin kamerasıyla QR'ı okutur ya da `kalkansa.github.io/egido` adresine girip kodu yazar.
+3. Ad ve sınıfını yazar, oynar. Skoru sınıfın ortak tablosuna düşer.
+
+Kod → soru seti eşlemesi Supabase'deki `sets` tablosunda tutulur. Supabase ayarı yoksa
+panel kod yerine ayarları içeren uzun bağlantıyı ve onun QR'ını gösterir.
+
 ## Skor tablosu nasıl çalışır
 
 - Her soru seti için bir anahtar üretilir: oyun kimliği + soru/cevapların özeti + oturum kimliği (`sid`).
