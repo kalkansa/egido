@@ -61,6 +61,11 @@ textarea { min-height: 120px; resize: vertical; line-height: 1.45; }
   padding: 10px 18px; border-radius: 10px; font-size: 14px; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 10; }
 .toast.show { opacity: 1; }
 
+/* Dil seçici */
+select.langsel { width: auto; padding: 6px 28px 6px 10px; font-size: 13px; border-radius: 8px; background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235b6b85'/%3E%3C/svg%3E") no-repeat right 10px center; appearance: none; -webkit-appearance: none; }
+.langrow { display: flex; justify-content: flex-end; margin: -10px -10px 0 0; }
+.langfixed { position: fixed; top: 12px; right: 12px; z-index: 9; }
+
 /* Öğretmen çubuğu (oyun sayfasının üstü) */
 .tbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: #eef3fa; border-radius: 12px; padding: 10px 12px; margin: -6px 0 16px; font-size: 14px; }
 .tbar input { flex: 1; min-width: 160px; padding: 7px 10px; font-size: 14px; }

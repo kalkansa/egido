@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Egido – Eğitim Oyunları</title>
+<title>Egido</title>
+<link rel="icon" type="image/svg+xml" href="shared/logo.svg">
 <link rel="stylesheet" href="shared/egido.css">
 <style>
   body { overflow: auto; user-select: text; display: flex; flex-direction: column; align-items: center; padding: 36px 16px; min-height: 100vh; color: #fff; }
@@ -18,8 +19,6 @@
   .code-form input { flex: 1; font-size: 30px; font-weight: 800; letter-spacing: .35em; text-align: center; text-transform: uppercase; padding: 10px 6px 10px 14px; min-width: 0; }
   input[type=password] { width: 100%; font: inherit; font-size: 15px; padding: 10px 12px; border: 2px solid #d7deea; border-radius: 10px; outline: none; }
   input[type=password]:focus { border-color: var(--bg2); }
-
-  /* Öğretmen paneli */
   .dash { width: min(980px, 100%); margin-top: 22px; }
   .dash-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
   .dash-head .who { opacity: .9; font-size: 14px; }
@@ -43,31 +42,32 @@
 </style>
 </head>
 <body>
-  <h1>🎓 Egido</h1>
-  <p class="sub">Öğretmen soruları hazırlar, öğrenciler kodla katılır, sınıf yarışır.</p>
+  <div class="langfixed" id="langHost"></div>
+  <h1><img src="shared/logo.svg" alt="" style="width:1.1em;height:1.1em;vertical-align:-0.18em;margin-right:.25em">Egido</h1>
+  <p class="sub" data-i18n="home.sub"></p>
 
   <!-- ===== Giriş yapılmamış: öğrenci kodu + öğretmen girişi ===== -->
   <div class="wrap" id="guest">
     <div class="panel">
-      <h2>🎟 Öğrenci misin?</h2>
-      <p>Öğretmeninin tahtaya yazdığı 5 harfli kodu gir.</p>
+      <h2 data-i18n="home.studentTitle"></h2>
+      <p data-i18n="home.studentSub"></p>
       <form class="code-form" id="joinForm" autocomplete="off">
-        <input type="text" id="code" maxlength="5" placeholder="KALE7" autocapitalize="characters" spellcheck="false" aria-label="Oyun kodu">
-        <button class="btn" id="joinBtn" type="submit">Katıl</button>
+        <input type="text" id="code" maxlength="5" placeholder="KALE7" autocapitalize="characters" spellcheck="false">
+        <button class="btn" id="joinBtn" type="submit" data-i18n="home.join"></button>
       </form>
       <div class="err" id="joinErr"></div>
     </div>
 
     <div class="panel">
-      <h2>👩‍🏫 Öğretmen Girişi</h2>
-      <p>Hesabınız yöneticiniz tarafından açılır.</p>
+      <h2 data-i18n="home.teacherTitle"></h2>
+      <p data-i18n="home.teacherSub"></p>
       <form id="loginForm" autocomplete="on">
-        <label for="user">Kullanıcı adı</label>
+        <label for="user" data-i18n="home.user"></label>
         <input type="text" id="user" autocomplete="username" autocapitalize="off" spellcheck="false">
-        <label for="pass">Şifre</label>
+        <label for="pass" data-i18n="home.pass"></label>
         <input type="password" id="pass" autocomplete="current-password">
         <div class="err" id="loginErr"></div>
-        <button class="btn" id="loginBtn" type="submit">Giriş Yap</button>
+        <button class="btn" id="loginBtn" type="submit" data-i18n="home.login"></button>
       </form>
     </div>
   </div>
@@ -75,23 +75,25 @@
   <!-- ===== Giriş yapılmış: öğretmen paneli ===== -->
   <div class="dash hidden" id="dash">
     <div class="dash-head">
-      <h2 style="margin:0">Oyunlarım</h2>
-      <div class="who"><span id="who"></span> · <a href="#" id="logout">Çıkış</a></div>
+      <h2 style="margin:0" data-i18n="home.myGames"></h2>
+      <div class="who"><span id="who"></span> · <a href="#" id="logout" data-i18n="tbar.logout"></a></div>
     </div>
     <div class="newgames" id="newgames"></div>
     <div class="mylist">
-      <h3>Kayıtlı oyunlar</h3>
-      <div id="list"><div class="empty">Yükleniyor…</div></div>
+      <h3 data-i18n="home.saved"></h3>
+      <div id="list"></div>
     </div>
   </div>
 
-  <footer>Öğrencilerden yalnızca ad ve sınıf istenir. Skorlar ders için tutulur.</footer>
+  <footer data-i18n="home.footer"></footer>
 
 <script src="shared/config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="shared/i18n.js"></script>
 <script>
 (() => {
   const $ = s => document.querySelector(s);
+  const t = I18N.t;
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const SB = window.BP_CONFIG || {};
   const remote = !!(SB.supabaseUrl && SB.supabaseAnonKey && window.supabase);
@@ -101,12 +103,14 @@
   const USER_DOMAIN = SB.userDomain || 'egido.local';
   const toEmail = u => u.includes('@') ? u : `${u}@${USER_DOMAIN}`;
 
-  // Oyun kataloğu: yeni oyun eklenince buraya bir satır eklenir
-  const GAMES = [
-    { id: 'balon',  emoji: '🎈', name: 'Balon Patlat',  desc: 'Doğru cevaplı balonları patlat' },
-    { id: 'puzzle', emoji: '🧩', name: 'Harf Puzzle',   desc: 'Resme bak, harfleri dizip kelimeyi yaz' },
-  ];
-  const gameOf = id => GAMES.find(g => g.id === id) || { emoji: '🎮', name: id };
+  // Oyun kataloğu: yeni oyun eklenince buraya bir satır eklenir (adlar i18n.js içinde game.<id>.name / .desc)
+  const GAMES = [{ id: 'balon', emoji: '🎈' }, { id: 'puzzle', emoji: '🧩' }];
+  const gameOf = id => GAMES.find(g => g.id === id) || { id, emoji: '🎮' };
+  const gname = g => t('game.' + g.id + '.name') === 'game.' + g.id + '.name' ? g.id : t('game.' + g.id + '.name');
+
+  $('#langHost').innerHTML = I18N.selectorHtml();
+  I18N.apply(); I18N.bindSelectors();
+  document.addEventListener('egido:lang', () => render());
 
   // ---------- Öğrenci: kodla katıl ----------
   const codeRe = /^[A-Z2-9]{5}$/;
@@ -115,17 +119,17 @@
   async function join(code) {
     const err = $('#joinErr'), btn = $('#joinBtn');
     code = norm(code);
-    if (!codeRe.test(code)) { err.textContent = 'Kod 5 karakter olmalı.'; return; }
-    if (!remote) { err.textContent = 'Oyun kodları henüz etkin değil.'; return; }
-    err.textContent = ''; btn.disabled = true; btn.textContent = 'Aranıyor…';
+    if (!codeRe.test(code)) { err.textContent = t('home.codeLen'); return; }
+    if (!remote) { err.textContent = t('home.codeOff'); return; }
+    err.textContent = ''; btn.disabled = true; btn.textContent = t('home.searching');
     try {
       const { data, error } = await sb.rpc('join_set', { p_code: code });
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
-      if (!row) { err.textContent = 'Bu kodla bir oyun bulunamadı. Kodu kontrol et.'; return; }
+      if (!row) { err.textContent = t('home.codeNotFound'); return; }
       location.href = `games/${encodeURIComponent(row.game)}/?k=${code}`;
-    } catch (e) { err.textContent = 'Bağlantı hatası. İnterneti kontrol edip tekrar dene.'; }
-    finally { btn.disabled = false; btn.textContent = 'Katıl'; }
+    } catch (e) { err.textContent = t('home.netFail'); }
+    finally { btn.disabled = false; btn.textContent = t('home.join'); }
   }
   $('#joinForm').addEventListener('submit', e => { e.preventDefault(); join($('#code').value); });
   $('#code').addEventListener('input', e => { const v = norm(e.target.value); if (v !== e.target.value) e.target.value = v; });
@@ -134,13 +138,13 @@
   $('#loginForm').addEventListener('submit', async e => {
     e.preventDefault();
     const err = $('#loginErr'), btn = $('#loginBtn');
-    if (!remote) { err.textContent = 'Supabase ayarı yapılmadan giriş yapılamaz.'; return; }
+    if (!remote) { err.textContent = t('home.noSb'); return; }
     const u = $('#user').value.trim(), p = $('#pass').value;
-    if (!u || !p) { err.textContent = 'Kullanıcı adı ve şifre gerekli.'; return; }
-    err.textContent = ''; btn.disabled = true; btn.textContent = 'Giriş yapılıyor…';
+    if (!u || !p) { err.textContent = t('home.needBoth'); return; }
+    err.textContent = ''; btn.disabled = true; btn.textContent = t('home.loggingIn');
     const { error } = await sb.auth.signInWithPassword({ email: toEmail(u), password: p });
-    btn.disabled = false; btn.textContent = 'Giriş Yap';
-    if (error) { err.textContent = 'Kullanıcı adı veya şifre hatalı.'; return; }
+    btn.disabled = false; btn.textContent = t('home.login');
+    if (error) { err.textContent = t('home.badLogin'); return; }
     render();
   });
   $('#logout').onclick = async e => { e.preventDefault(); await sb.auth.signOut(); render(); };
@@ -152,25 +156,26 @@
     $('#dash').classList.toggle('hidden', !session);
     if (!session) return;
     $('#who').textContent = session.user.email.replace('@' + USER_DOMAIN, '');
-    $('#newgames').innerHTML = GAMES.map(g => `<a class="gcard" href="games/${g.id}/"><span class="emoji">${g.emoji}</span><span><b>+ ${esc(g.name)}</b><small>${esc(g.desc)}</small></span></a>`).join('');
+    $('#newgames').innerHTML = GAMES.map(g => `<a class="gcard" href="games/${g.id}/"><span class="emoji">${g.emoji}</span><span><b>+ ${esc(gname(g))}</b><small>${esc(t('game.' + g.id + '.desc'))}</small></span></a>`).join('');
+    $('#list').innerHTML = `<div class="empty">${t('loading')}</div>`;
     const { data, error } = await sb.from('sets').select('id,code,game,title,updated_at').order('updated_at', { ascending: false });
-    if (error) { $('#list').innerHTML = `<div class="empty">Liste alınamadı: ${esc(error.message)}</div>`; return; }
-    if (!data.length) { $('#list').innerHTML = '<div class="empty">Henüz kayıtlı oyun yok. Yukarıdan bir oyun türü seçip soruları yazın, "Kaydet" deyin.</div>'; return; }
-    $('#list').innerHTML = `<table class="games"><thead><tr><th>Oyun</th><th>Ad</th><th>Kod</th><th>Güncelleme</th><th></th></tr></thead><tbody>` +
-      data.map(r => { const g = gameOf(r.game); return `<tr data-id="${r.id}">
-        <td>${g.emoji} ${esc(g.name)}</td>
-        <td>${esc(r.title || '(adsız)')}</td>
+    if (error) { $('#list').innerHTML = `<div class="empty">${t('home.listFail', { e: esc(error.message) })}</div>`; return; }
+    if (!data.length) { $('#list').innerHTML = `<div class="empty">${t('home.noGames')}</div>`; return; }
+    $('#list').innerHTML = `<table class="games"><thead><tr><th>${t('home.colGame')}</th><th>${t('home.colTitle')}</th><th>${t('home.colCode')}</th><th>${t('home.colDate')}</th><th></th></tr></thead><tbody>` +
+      data.map(r => { const g = gameOf(r.game); return `<tr>
+        <td>${g.emoji} ${esc(gname(g))}</td>
+        <td>${esc(r.title || t('home.untitled'))}</td>
         <td class="code">${esc(r.code)}</td>
-        <td>${new Date(r.updated_at).toLocaleDateString('tr-TR')}</td>
+        <td>${new Date(r.updated_at).toLocaleDateString(I18N.lang)}</td>
         <td class="acts">
-          <a class="btn small" href="games/${esc(r.game)}/?id=${r.id}&share=1">🎟 Kodu Göster</a>
-          <a class="btn small secondary" href="games/${esc(r.game)}/?id=${r.id}">✏ Düzenle</a>
+          <a class="btn small" href="games/${esc(r.game)}/?id=${r.id}&share=1">${t('home.showCode')}</a>
+          <a class="btn small secondary" href="games/${esc(r.game)}/?id=${r.id}">${t('home.edit')}</a>
           <button class="btn small secondary del" data-id="${r.id}" data-title="${esc(r.title)}">🗑</button>
         </td></tr>`; }).join('') + '</tbody></table>';
     document.querySelectorAll('.del').forEach(b => b.onclick = async () => {
-      if (!confirm(`"${b.dataset.title || 'Bu oyun'}" silinsin mi? Kod artık çalışmaz.`)) return;
+      if (!confirm(t('home.delConfirm', { t: b.dataset.title || '…' }))) return;
       const { error } = await sb.from('sets').delete().eq('id', b.dataset.id);
-      if (error) alert('Silinemedi: ' + error.message); else render();
+      if (error) alert(t('home.delFail', { e: error.message })); else render();
     });
   }
 

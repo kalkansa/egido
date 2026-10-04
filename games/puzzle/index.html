@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Harf Puzzle – Egido</title>
+<title>Egido</title>
+<link rel="icon" type="image/svg+xml" href="../../shared/logo.svg">
 <link rel="stylesheet" href="../../shared/egido.css">
 <style>
   /* ---------- Öğretmen: soru listesi ---------- */
@@ -38,8 +39,8 @@
   .tile { position: relative; width: var(--tz); height: var(--tz); border-radius: 12px; background: linear-gradient(180deg, #ffe08a, #ffb703); color: #4a2d00;
     display: flex; align-items: center; justify-content: center; font-size: calc(var(--tz) * .58); font-weight: 900; cursor: pointer; user-select: none;
     box-shadow: 0 5px 0 #c77d00, 0 8px 16px rgba(0,0,0,.25); transition: transform .12s, opacity .15s; transform: rotate(var(--rot)); }
-  .tile::before { content: ''; position: absolute; top: -9px; left: 50%; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%; background: #ffd25e; } /* puzzle çıkıntısı */
-  .tile::after { content: ''; position: absolute; bottom: -1px; left: 50%; width: 16px; height: 9px; margin-left: -8px; border-radius: 8px 8px 0 0; background: rgba(0,0,0,.18); } /* puzzle girintisi */
+  .tile::before { content: ''; position: absolute; top: -9px; left: 50%; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%; background: #ffd25e; }
+  .tile::after { content: ''; position: absolute; bottom: -1px; left: 50%; width: 16px; height: 9px; margin-left: -8px; border-radius: 8px 8px 0 0; background: rgba(0,0,0,.18); }
   .tile:active { transform: rotate(var(--rot)) translateY(3px); box-shadow: 0 2px 0 #c77d00; }
   .tile.used { opacity: 0; pointer-events: none; transform: scale(.6); }
   .pz-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
@@ -54,42 +55,42 @@
 <div id="setup" class="screen">
   <div class="card">
     <div id="teacherBarHost"></div>
-    <h1>🧩 Harf <span>Puzzle</span></h1>
-    <p class="sub">Her soru için bir resim (ya da emoji) ve yazılışını ekleyin. Harfler karışık parçalar olarak dağılır, öğrenci doğru sırayla dizer.</p>
+    <h1 data-i18n="puzzle.title"></h1>
+    <p class="sub" data-i18n="puzzle.sub"></p>
 
-    <label>Sorular <small>(istediğiniz kadar ekleyin; resim bilgisayardan seçilir, küçültülerek saklanır)</small></label>
+    <label data-i18n="puzzle.items"></label>
     <div class="items" id="items"></div>
     <div class="addrow">
-      <button class="btn secondary" id="btnAdd">+ Soru ekle</button>
-      <button class="btn secondary" id="btnExample">Örnek doldur</button>
+      <button class="btn secondary" id="btnAdd" data-i18n="puzzle.add"></button>
+      <button class="btn secondary" id="btnExample" data-i18n="setup.example"></button>
     </div>
     <input type="file" id="file" accept="image/*" class="hidden">
 
     <div class="cols four">
       <div>
-        <label for="order">Soru sırası</label>
-        <select id="order"><option value="random" selected>Karışık</option><option value="fixed">Yazıldığı sıra</option></select>
+        <label for="order" data-i18n="puzzle.order"></label>
+        <select id="order"><option value="random" selected data-i18n="puzzle.random"></option><option value="fixed" data-i18n="puzzle.fixed"></option></select>
       </div>
       <div>
-        <label for="time">Soru başına süre</label>
-        <select id="time"><option value="0">Süresiz</option><option value="15">15 sn</option><option value="30" selected>30 sn</option><option value="45">45 sn</option><option value="60">60 sn</option></select>
+        <label for="time" data-i18n="puzzle.time"></label>
+        <select id="time"><option value="0" data-i18n="puzzle.noTime"></option><option value="15">15 s</option><option value="30" selected>30 s</option><option value="45">45 s</option><option value="60">60 s</option></select>
       </div>
       <div>
-        <label for="extra">Fazladan harf</label>
-        <select id="extra"><option value="0" selected>Yok</option><option value="2">2 harf</option><option value="4">4 harf</option></select>
+        <label for="extra" data-i18n="puzzle.extra"></label>
+        <select id="extra"><option value="0" selected data-i18n="puzzle.none"></option><option value="2">+2</option><option value="4">+4</option></select>
       </div>
       <div>
-        <label for="hint">İpucu</label>
-        <select id="hint"><option value="0" selected>Yok</option><option value="1">İlk harf açık</option></select>
+        <label for="hint" data-i18n="puzzle.hint"></label>
+        <select id="hint"><option value="0" selected data-i18n="puzzle.none"></option><option value="1" data-i18n="puzzle.firstLetter"></option></select>
       </div>
     </div>
-    <p class="hint">Öğrenci "Tamam" deyince cevap kontrol edilir, yanlışsa doğrusu gösterilir ve sonraki soruya geçilir.</p>
+    <p class="hint" data-i18n="puzzle.help"></p>
 
     <div class="err" id="setupErr"></div>
     <div class="row">
-      <button class="btn" id="btnStart">▶ Oyunu Dene</button>
-      <button class="btn" id="btnShare">🎟 Öğrenci Kodu Oluştur</button>
-      <button class="btn secondary" id="btnLbSetup">🏆 Skor Tablosu</button>
+      <button class="btn" id="btnStart" data-i18n="setup.try"></button>
+      <button class="btn" id="btnShare" data-i18n="setup.code"></button>
+      <button class="btn secondary" id="btnLbSetup" data-i18n="setup.lb"></button>
     </div>
     <div id="sharePanelHost"></div>
   </div>
@@ -103,16 +104,16 @@
     <div class="q"></div>
     <div class="pill progress" id="hudProg">1/1</div>
     <div class="pill progress" id="hudTime">⏱ 30</div>
-    <div class="pill pauseBtn" id="btnQuit" title="Çıkış">✕</div>
+    <div class="pill pauseBtn" id="btnQuit">✕</div>
   </div>
   <div class="pz" id="pz">
     <div class="pz-img" id="pzImg"></div>
     <div class="slots" id="slots"></div>
     <div class="tiles" id="tiles"></div>
     <div class="pz-actions">
-      <button class="btn secondary" id="btnUndo">⌫ Sil</button>
-      <button class="btn secondary" id="btnShuffle">🔀 Karıştır</button>
-      <button class="btn ok big" id="btnOk">✔ Tamam</button>
+      <button class="btn secondary" id="btnUndo" data-i18n="puzzle.undo"></button>
+      <button class="btn secondary" id="btnShuffle" data-i18n="puzzle.shuffle"></button>
+      <button class="btn ok big" id="btnOk" data-i18n="puzzle.ok"></button>
     </div>
     <div class="pz-fb" id="fb"></div>
   </div>
@@ -122,14 +123,17 @@
 <script src="../../shared/config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="../../shared/i18n.js"></script>
 <script src="../../shared/egido.js"></script>
 <script>
 (() => {
   'use strict';
   const $ = s => document.querySelector(s);
+  const t = I18N.t;
   const { sfx, escapeHtml, shuffle } = Egido;
-  const up = s => s.toLocaleUpperCase('tr');
-  const ALPHABET = 'ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ';
+  // Büyük harf ve ek harf alfabesi: Türkçe için İ/ı kuralı, diğer diller için Latin
+  const up = s => (I18N.lang === 'tr' ? s.toLocaleUpperCase('tr') : s.toLocaleUpperCase());
+  const alphabet = () => ({ tr: 'ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ', de: 'ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜ', es: 'ABCDEFGHIJLMNÑOPQRSTUVXYZÁÉÍÓÚ' }[I18N.lang] || 'ABCDEFGHIJKLMNOPQRSTUVWXYZ');
 
   // ---------- Öğretmen: soru listesi ----------
   let items = []; // [{ img: 'data:...' | 'https://...' | 'emoji:🐘' | '', word: 'FİL' }]
@@ -138,11 +142,11 @@
     const box = $('#items');
     box.innerHTML = items.map((it, i) => `
       <div class="item" data-i="${i}">
-        <div class="thumb ${it.img ? '' : 'empty'}" title="Resim seç">${thumbHtml(it.img)}</div>
-        <input type="text" class="imgsrc" placeholder="Resim seç ↖ ya da emoji / resim adresi yaz" value="${it.img.startsWith('data:') ? '' : escapeHtml(it.img.replace(/^emoji:/, ''))}">
-        <input type="text" class="word" placeholder="Yazılışı (örn: FİL)" maxlength="24" value="${escapeHtml(it.word)}">
-        <button class="rm" title="Sil">✕</button>
-      </div>`).join('') || '<div class="hint">Henüz soru yok. "Soru ekle" ile başlayın.</div>';
+        <div class="thumb ${it.img ? '' : 'empty'}" title="${t('puzzle.pick')}">${thumbHtml(it.img)}</div>
+        <input type="text" class="imgsrc" placeholder="${t('puzzle.imgPh')}" value="${it.img.startsWith('data:') ? '' : escapeHtml(it.img.replace(/^emoji:/, ''))}">
+        <input type="text" class="word" placeholder="${t('puzzle.wordPh')}" maxlength="24" value="${escapeHtml(it.word)}">
+        <button class="rm" title="${t('puzzle.remove')}">✕</button>
+      </div>`).join('') || `<div class="hint">${t('puzzle.noItems')}</div>`;
     box.querySelectorAll('.item').forEach(row => {
       const i = +row.dataset.i;
       row.querySelector('.thumb').onclick = () => { fileTarget = i; $('#file').value = ''; $('#file').click(); };
@@ -160,6 +164,7 @@
     if (img.startsWith('emoji:')) return escapeHtml(img.slice(6));
     return `<img src="${escapeHtml(img)}" alt="">`;
   }
+  document.addEventListener('egido:lang', renderItems);
   $('#btnAdd').onclick = () => { items.push({ img: '', word: '' }); renderItems(); const rows = document.querySelectorAll('.item .word'); if (rows.length) rows[rows.length - 1].focus(); };
   // Resmi küçültüp JPEG olarak sakla: ayarların içinde taşınır, ayrı depolama gerekmez
   $('#file').onchange = () => {
@@ -172,14 +177,11 @@
       items[fileTarget].img = c.toDataURL('image/jpeg', .82);
       URL.revokeObjectURL(url); renderItems();
     };
-    im.onerror = () => { Egido.toast('Resim okunamadı.'); URL.revokeObjectURL(url); };
+    im.onerror = () => { Egido.toast(t('puzzle.imgFail')); URL.revokeObjectURL(url); };
     im.src = url;
   };
   $('#btnExample').onclick = () => {
-    writeConfig({ items: [
-      { img: 'emoji:🐘', word: 'FİL' }, { img: 'emoji:🍎', word: 'ELMA' }, { img: 'emoji:🚗', word: 'ARABA' },
-      { img: 'emoji:🐱', word: 'KEDİ' }, { img: 'emoji:🌙', word: 'AY' }, { img: 'emoji:🍓', word: 'ÇİLEK' },
-    ], order: 'random', time: 30, extra: 0, hint: 0 });
+    writeConfig({ items: t('puzzle.ex').split('|').map(p => { const [e, w] = p.split(':'); return { img: 'emoji:' + e, word: w }; }), order: 'random', time: 30, extra: 0, hint: 0 });
   };
 
   function readConfig() {
@@ -193,17 +195,17 @@
     renderItems();
   }
   function validate(c) {
-    if (!Array.isArray(c.items) || !c.items.length) return 'En az bir soru ekleyin (resim + yazılışı).';
+    if (!Array.isArray(c.items) || !c.items.length) return t('puzzle.errEmpty');
     for (const it of c.items) {
       const letters = it.word.replace(/ /g, '');
-      if (letters.length < 2) return `"${it.word}" çok kısa; en az 2 harf olmalı.`;
-      if (letters.length > 16) return `"${it.word}" çok uzun; en fazla 16 harf olmalı.`;
+      if (letters.length < 2) return t('puzzle.errShort', { w: it.word });
+      if (letters.length > 16) return t('puzzle.errLong', { w: it.word });
     }
     return '';
   }
 
   // ---------- Oyun ----------
-  const G = { cfg: null, running: false, order: [], idx: 0, score: 0, correct: 0, wrong: 0, missed: [], t0: 0, slots: [], tiles: [], locked: false, timer: null, timeLeft: 0, elapsedQ: 0 };
+  const G = { cfg: null, running: false, order: [], idx: 0, score: 0, correct: 0, wrong: 0, missed: [], t0: 0, slots: [], tiles: [], locked: false, timer: null, timeLeft: 0 };
   const cur = () => G.cfg.items[G.order[G.idx]];
 
   function startGame(cfg) {
@@ -222,22 +224,19 @@
     $('#hudScore').textContent = '⭐ ' + G.score;
     $('#hudProg').textContent = `${G.idx + 1}/${G.order.length}`;
     $('#fb').textContent = ''; $('#fb').classList.remove('bad');
-    $('#pzImg').innerHTML = !q.img ? '<div class="none">Kelimeyi yaz</div>' : q.img.startsWith('emoji:') ? `<div class="emo">${escapeHtml(q.img.slice(6))}</div>` : `<img src="${escapeHtml(q.img)}" alt="">`;
-    // kutu boyutu: harf sayısına göre küçülür
+    $('#pzImg').innerHTML = !q.img ? `<div class="none">${t('puzzle.writeWord')}</div>` : q.img.startsWith('emoji:') ? `<div class="emo">${escapeHtml(q.img.slice(6))}</div>` : `<img src="${escapeHtml(q.img)}" alt="">`;
     const tz = Math.max(40, Math.min(72, Math.floor((Math.min(window.innerWidth, 900) - 40) / (word.length + 1)) - 8));
     document.documentElement.style.setProperty('--tz', tz + 'px');
 
-    // Yuvalar: her harf için bir yuva, boşluklar için aralık
     G.slots = word.split('').map(ch => ({ ch, gap: ch === ' ', tile: null, locked: false }));
-    // Parçalar: harfler + fazladan harfler, karışık
-    let pool = letters.slice();
-    for (let i = 0; i < G.cfg.extra; i++) pool.push(ALPHABET[Math.floor(Math.random() * ALPHABET.length)]);
+    const pool = letters.slice(), A = alphabet();
+    for (let i = 0; i < G.cfg.extra; i++) pool.push(A[Math.floor(Math.random() * A.length)]);
     let order = shuffle(pool);
-    for (let t = 0; t < 5 && order.join('') === letters.join(''); t++) order = shuffle(pool); // harfler yerli yerinde kalmasın
+    for (let k = 0; k < 5 && order.join('') === letters.join(''); k++) order = shuffle(pool); // harfler yerli yerinde kalmasın
     G.tiles = order.map((ch, i) => ({ id: i, ch, used: false, rot: (Math.random() * 16 - 8).toFixed(1) + 'deg' }));
-    if (G.cfg.hint) { // ilk harf açık
-      const s = G.slots.find(x => !x.gap), t = G.tiles.find(x => x.ch === s.ch);
-      s.tile = t.id; s.locked = true; t.used = true;
+    if (G.cfg.hint) {
+      const s = G.slots.find(x => !x.gap), tl = G.tiles.find(x => x.ch === s.ch);
+      s.tile = tl.id; s.locked = true; tl.used = true;
     }
     G.locked = false;
     renderPuzzle();
@@ -246,7 +245,7 @@
   function renderPuzzle() {
     $('#slots').innerHTML = G.slots.map((s, i) => s.gap ? '<div class="slot gap"></div>' :
       `<div class="slot ${s.tile != null ? 'filled' : ''} ${s.locked ? 'locked' : ''}" data-i="${i}">${s.tile != null ? escapeHtml(G.tiles[s.tile].ch) : ''}</div>`).join('');
-    $('#tiles').innerHTML = G.tiles.map(t => `<div class="tile ${t.used ? 'used' : ''}" data-id="${t.id}" style="--rot:${t.rot}">${escapeHtml(t.ch)}</div>`).join('');
+    $('#tiles').innerHTML = G.tiles.map(tl => `<div class="tile ${tl.used ? 'used' : ''}" data-id="${tl.id}" style="--rot:${tl.rot}">${escapeHtml(tl.ch)}</div>`).join('');
     $('#slots').querySelectorAll('.slot.filled:not(.locked)').forEach(el => el.onclick = () => unplace(+el.dataset.i));
     $('#tiles').querySelectorAll('.tile:not(.used)').forEach(el => el.onclick = () => place(+el.dataset.id));
   }
@@ -261,13 +260,13 @@
     G.tiles[s.tile].used = false; s.tile = null; renderPuzzle();
   }
   $('#btnUndo').onclick = () => { for (let i = G.slots.length - 1; i >= 0; i--) if (G.slots[i].tile != null && !G.slots[i].locked) { unplace(i); return; } };
-  $('#btnShuffle').onclick = () => { if (G.locked) return; G.tiles.forEach(t => t.rot = (Math.random() * 16 - 8).toFixed(1) + 'deg'); const free = shuffle(G.tiles.filter(t => !t.used)); let k = 0; G.tiles = G.tiles.map(t => t.used ? t : free[k++]); renderPuzzle(); };
+  $('#btnShuffle').onclick = () => { if (G.locked) return; G.tiles.forEach(tl => tl.rot = (Math.random() * 16 - 8).toFixed(1) + 'deg'); const free = shuffle(G.tiles.filter(tl => !tl.used)); let k = 0; G.tiles = G.tiles.map(tl => tl.used ? tl : free[k++]); renderPuzzle(); };
   $('#btnOk').onclick = confirm_;
   document.addEventListener('keydown', e => {
     if (!G.running || G.locked || $('#game').classList.contains('hidden')) return;
     if (e.key === 'Enter') return confirm_();
     if (e.key === 'Backspace') return $('#btnUndo').click();
-    if (e.key.length === 1) { const ch = up(e.key); const t = G.tiles.find(x => !x.used && x.ch === ch); if (t) place(t.id); }
+    if (e.key.length === 1) { const ch = up(e.key); const tl = G.tiles.find(x => !x.used && x.ch === ch); if (tl) place(tl.id); }
   });
 
   function startTimer() {
@@ -286,7 +285,7 @@
   function confirm_() {
     if (!G.running || G.locked) return;
     const filled = G.slots.every(s => s.gap || s.tile != null);
-    if (!filled) { $('#slots').classList.remove('shake'); void $('#slots').offsetWidth; $('#slots').classList.add('shake'); Egido.toast('Önce tüm harfleri yerleştir.'); return; }
+    if (!filled) { $('#slots').classList.remove('shake'); void $('#slots').offsetWidth; $('#slots').classList.add('shake'); Egido.toast(t('puzzle.fillAll')); return; }
     const answer = G.slots.map(s => s.gap ? ' ' : G.tiles[s.tile].ch).join('');
     judge(answer === cur().word, false);
   }
@@ -297,32 +296,32 @@
     if (ok) {
       const bonus = G.cfg.time ? Math.round(Math.max(0, G.timeLeft) / G.cfg.time * 5) : 0;
       G.score += 10 + bonus; G.correct++;
-      $('#fb').innerHTML = `<b>Doğru! +${10 + bonus}</b>`; sfx.good();
+      $('#fb').innerHTML = `<b>${t('puzzle.right', { p: 10 + bonus })}</b>`; sfx.good();
     } else {
       G.wrong++; G.missed.push(word);
-      $('#fb').classList.add('bad'); $('#fb').innerHTML = `${timeout ? 'Süre doldu. ' : 'Yanlış. '}Doğrusu: <b>${escapeHtml(word)}</b>`; sfx.bad();
+      $('#fb').classList.add('bad'); $('#fb').innerHTML = t(timeout ? 'puzzle.timeIs' : 'puzzle.wrongIs', { w: escapeHtml(word) }); sfx.bad();
     }
     $('#hudScore').textContent = '⭐ ' + G.score;
     setTimeout(() => { if (!G.running) return; G.idx++; if (G.idx >= G.order.length) endGame(); else showQuestion(); }, ok ? 1200 : 2200);
   }
-  $('#btnQuit').onclick = () => { if (G.running && confirm('Oyundan çıkılsın mı? Skor kaydedilmez.')) endGame('quit'); };
+  $('#btnQuit').onclick = () => { if (G.running && confirm(t('puzzle.quitConfirm'))) endGame('quit'); };
 
   function endGame(kind) {
     G.running = false; stopTimer();
     const total = G.order.length, time = (performance.now() - G.t0) / 1000;
-    const r = { kind: kind || (G.correct === total ? 'win' : 'lose'), score: G.score, correct: G.correct, total, wrong: G.wrong, time, missed: G.missed, missedTitle: 'Yanlış yazılan kelimeler:' };
-    if (kind === 'quit') { r.emoji = '🚪'; r.title = 'Oyundan çıkıldı'; }
-    else if (r.kind === 'win') { r.emoji = '🏆'; r.title = 'Mükemmel!'; r.msg = 'Bütün kelimeleri doğru yazdın.'; sfx.win(); }
-    else { r.emoji = G.correct >= total / 2 ? '🎉' : '💪'; r.title = 'Oyun bitti'; r.msg = `${total} kelimeden ${G.correct} tanesini doğru yazdın.`; (G.correct >= total / 2 ? sfx.win : sfx.lose)(); }
+    const r = { kind: kind || (G.correct === total ? 'win' : 'lose'), score: G.score, correct: G.correct, total, wrong: G.wrong, time, missed: G.missed, missedTitle: t('puzzle.missed') };
+    if (kind === 'quit') { r.emoji = '🚪'; }
+    else if (r.kind === 'win') { r.emoji = '🏆'; r.title = t('puzzle.perfect'); r.msg = t('puzzle.perfectMsg'); sfx.win(); }
+    else { r.emoji = G.correct >= total / 2 ? '🎉' : '💪'; r.title = t('res.over'); r.msg = t('puzzle.overMsg', { t: total, c: G.correct }); (G.correct >= total / 2 ? sfx.win : sfx.lose)(); }
     Egido.finish(r);
   }
 
   renderItems();
   Egido.init({
-    gameId: 'puzzle', gameName: 'Harf Puzzle', emoji: '🧩',
-    introRules: 'Resme bak, karışık harf parçalarına dokunarak kelimeyi doğru sırayla diz. Her doğru kelime <b class="ok">+10 puan</b>, hızlı bitirirsen bonus var.',
+    gameId: 'puzzle', emoji: '🧩',
+    introRules: () => t('puzzle.rules'),
     readConfig, writeConfig, validate,
-    summary: c => `Harf Puzzle · ${(c.items || []).length} kelime`,
+    summary: c => t('puzzle.summary', { n: (c.items || []).length }),
     startGame,
   });
 })();
