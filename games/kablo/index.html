@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Egido</title>
+<link rel="icon" type="image/svg+xml" href="../../shared/logo.svg">
+<link rel="stylesheet" href="../../shared/egido.css?v=202610042202">
+<style>
+  /* ---------- Öğretmen: çift listesi (Harf Puzzle ile aynı düzen) ---------- */
+  .items { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+  .item { display: grid; grid-template-columns: 72px 1fr 1fr auto; gap: 10px; align-items: center; background: #f1f5fb; border-radius: 12px; padding: 10px; }
+  @media (max-width: 640px) { .item { grid-template-columns: 72px 1fr; } .item .word { grid-column: 2; } .item .rm { grid-column: 1 / -1; justify-self: end; } }
+  .thumb { width: 72px; height: 72px; border-radius: 10px; background: #fff; border: 2px dashed #c9d3e3; display: flex; align-items: center; justify-content: center; font-size: 40px; overflow: hidden; cursor: pointer; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .thumb.empty { font-size: 22px; color: #9aa8bd; }
+  .item input { margin: 0; }
+  .item .imgsrc { font-size: 13px; }
+  .item .rm { background: none; border: 0; color: var(--bad); font-size: 20px; cursor: pointer; padding: 6px 8px; }
+  .addrow { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+
+  /* ---------- Oyun: devre tahtası ---------- */
+  body.playing { background: radial-gradient(circle at 50% 30%, #1d3b2a 0%, #0f2419 70%); }
+  .board { position: absolute; inset: 0; padding: 64px 4vw 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 0 22vw; align-content: center; touch-action: none; user-select: none; }
+  .col { display: flex; flex-direction: column; justify-content: space-evenly; gap: 10px; min-height: 0; }
+  .node { position: relative; display: flex; align-items: center; gap: 10px; background: #f6f8fb; color: var(--ink); border-radius: 14px; padding: 8px 12px; min-height: var(--nh, 70px); max-height: var(--nh, 70px); box-shadow: 0 8px 20px rgba(0,0,0,.35); border: 3px solid transparent; cursor: pointer; transition: transform .1s, border-color .15s, box-shadow .15s; }
+  .node.sel { border-color: var(--accent); transform: scale(1.03); }
+  .node.ok { border-color: var(--ok); background: #e9fbef; cursor: default; }
+  .node.hit { animation: zap .5s; }
+  @keyframes zap { 0%,100% { transform: translateX(0); border-color: var(--bad); } 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(4px); } }
+  .node .pic { width: calc(var(--nh, 70px) - 22px); height: calc(var(--nh, 70px) - 22px); flex: 0 0 auto; border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: calc(var(--nh, 70px) * .55); background: #fff; }
+  .node .pic img { width: 100%; height: 100%; object-fit: cover; }
+  .node .txt { font-weight: 800; font-size: clamp(15px, 2.2vw, 24px); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
+  .node .bulb { font-size: 26px; flex: 0 0 auto; filter: grayscale(1) opacity(.45); transition: filter .3s, text-shadow .3s; }
+  .node.ok .bulb { filter: none; text-shadow: 0 0 18px #ffe066, 0 0 36px #ffd43b; animation: glow 1.4s ease-in-out infinite alternate; }
+  @keyframes glow { from { text-shadow: 0 0 12px #ffe066; } to { text-shadow: 0 0 26px #ffd43b, 0 0 50px #ffb703; } }
+  .plug { position: absolute; top: 50%; width: 18px; height: 18px; margin-top: -9px; border-radius: 50%; background: #c0392b; border: 3px solid #fff; box-shadow: 0 0 0 3px #7f8c8d; }
+  .left .plug { right: -12px; } .right .plug { left: -12px; background: #2980b9; }
+  .node.ok .plug { background: #27ae60; }
+  svg.wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+  svg.wires path { fill: none; stroke-width: 7; stroke-linecap: round; filter: drop-shadow(0 3px 3px rgba(0,0,0,.4)); }
+  svg.wires path.drag { stroke: #ffb703; stroke-dasharray: 12 8; }
+  svg.wires path.ok { stroke: #2ecc71; }
+  svg.wires path.bad { stroke: #e74c3c; animation: fizz .5s; }
+  @keyframes fizz { 0% { opacity: 1; } 50% { opacity: .3; } 100% { opacity: 0; } }
+  .spark { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: #ffd43b; pointer-events: none; z-index: 2; animation: spark .6s ease-out forwards; }
+  @keyframes spark { to { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; } }
+  .fb { position: absolute; left: 0; right: 0; bottom: 14px; text-align: center; color: #fff; font-size: clamp(20px, 3vw, 30px); font-weight: 900; text-shadow: 0 2px 8px rgba(0,0,0,.6); pointer-events: none; min-height: 36px; }
+  .fb.bad { color: #ffb3ab; }
+  .flashBad { position: fixed; inset: 0; pointer-events: none; z-index: 3; box-shadow: inset 0 0 160px rgba(231,76,60,0); transition: box-shadow .35s; }
+  .flashBad.on { box-shadow: inset 0 0 160px rgba(231,76,60,.8); transition: none; }
+</style>
+</head>
+<body>
+
+<!-- ===================== ÖĞRETMEN KURULUM ===================== -->
+<div id="setup" class="screen">
+  <div class="card">
+    <div id="teacherBarHost"></div>
+    <h1 data-i18n="kablo.title"></h1>
+    <p class="sub" data-i18n="kablo.sub"></p>
+
+    <label data-i18n="puzzle.items"></label>
+    <div class="items" id="items"></div>
+    <div class="addrow">
+      <button class="btn secondary" id="btnAdd" data-i18n="puzzle.add"></button>
+      <button class="btn secondary" id="btnExample" data-i18n="setup.example"></button>
+    </div>
+    <input type="file" id="file" accept="image/*" class="hidden">
+
+    <div class="cols three">
+      <div>
+        <label for="per" data-i18n="kablo.perRound"></label>
+        <select id="per"><option value="4">4</option><option value="5" selected>5</option><option value="6">6</option><option value="0" data-i18n="kablo.all"></option></select>
+      </div>
+      <div>
+        <label for="time" data-i18n="kablo.time"></label>
+        <select id="time"><option value="0" data-i18n="puzzle.noTime"></option><option value="30">30 s</option><option value="60" selected>60 s</option><option value="90">90 s</option></select>
+      </div>
+      <div>
+        <label for="lives" data-i18n="balon.lives"></label>
+        <select id="lives"><option value="3" selected>3</option><option value="5">5</option><option value="0" data-i18n="balon.unlimited"></option></select>
+      </div>
+    </div>
+    <p class="hint" data-i18n="kablo.hint"></p>
+
+    <div class="err" id="setupErr"></div>
+    <div class="row">
+      <button class="btn" id="btnStart" data-i18n="setup.try"></button>
+      <button class="btn" id="btnShare" data-i18n="setup.code"></button>
+      <button class="btn secondary" id="btnLbSetup" data-i18n="setup.lb"></button>
+    </div>
+    <div id="sharePanelHost"></div>
+  </div>
+</div>
+
+<!-- ===================== OYUN ===================== -->
+<div id="game" class="screen hidden">
+  <div class="hud">
+    <div class="pill" id="hudPlayer">👤</div>
+    <div class="pill progress" id="hudScore">⭐ 0</div>
+    <div class="q" id="hudRound"></div>
+    <div class="pill progress" id="hudLeft">💡 0/0</div>
+    <div class="pill lives" id="hudLives">❤❤❤</div>
+    <div class="pill progress" id="hudTime">⏱ 60</div>
+    <div class="pill pauseBtn" id="btnQuit">✕</div>
+  </div>
+  <div class="board" id="board">
+    <div class="col left" id="colL"></div>
+    <div class="col right" id="colR"></div>
+  </div>
+  <svg class="wires" id="wires"></svg>
+  <div class="fb" id="fb"></div>
+  <div class="flashBad" id="flashBad"></div>
+  <div id="countdown" class="hidden"></div>
+</div>
+
+<script src="../../shared/config.js?v=202610042202"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="../../shared/i18n.js?v=202610042202"></script>
+<script src="../../shared/egido.js?v=202610042202"></script>
+<script>
+(() => {
+  'use strict';
+  const $ = s => document.querySelector(s);
+  const t = I18N.t;
+  const { sfx, tone, escapeHtml, shuffle } = Egido;
+  const up = s => (I18N.lang === 'tr' ? s.toLocaleUpperCase('tr') : s.toLocaleUpperCase());
+
+  // ---------- Öğretmen: çift listesi ----------
+  let items = []; // [{ img, word }]
+  let fileTarget = -1;
+  function thumbHtml(img) { if (!img) return '📷'; if (img.startsWith('emoji:')) return escapeHtml(img.slice(6)); return `<img src="${escapeHtml(img)}" alt="">`; }
+  function renderItems() {
+    const box = $('#items');
+    box.innerHTML = items.map((it, i) => `
+      <div class="item" data-i="${i}">
+        <div class="thumb ${it.img ? '' : 'empty'}" title="${t('puzzle.pick')}">${thumbHtml(it.img)}</div>
+        <input type="text" class="imgsrc" placeholder="${t('puzzle.imgPh')}" value="${it.img.startsWith('data:') ? '' : escapeHtml(it.img.replace(/^emoji:/, ''))}">
+        <input type="text" class="word" placeholder="${t('kablo.wordPh')}" maxlength="30" value="${escapeHtml(it.word)}">
+        <button class="rm" title="${t('puzzle.remove')}">✕</button>
+      </div>`).join('') || `<div class="hint">${t('puzzle.noItems')}</div>`;
+    box.querySelectorAll('.item').forEach(row => {
+      const i = +row.dataset.i;
+      row.querySelector('.thumb').onclick = () => { fileTarget = i; $('#file').value = ''; $('#file').click(); };
+      row.querySelector('.word').oninput = e => { items[i].word = e.target.value; };
+      row.querySelector('.imgsrc').onchange = e => {
+        const v = e.target.value.trim();
+        items[i].img = !v ? (items[i].img.startsWith('data:') ? items[i].img : '') : /^https?:\/\//i.test(v) ? v : 'emoji:' + v;
+        renderItems();
+      };
+      row.querySelector('.rm').onclick = () => { items.splice(i, 1); renderItems(); };
+    });
+  }
+  document.addEventListener('egido:lang', renderItems);
+  $('#btnAdd').onclick = () => { items.push({ img: '', word: '' }); renderItems(); const rows = document.querySelectorAll('.item .word'); if (rows.length) rows[rows.length - 1].focus(); };
+  $('#file').onchange = () => {
+    const f = $('#file').files[0]; if (!f || fileTarget < 0) return;
+    const url = URL.createObjectURL(f), im = new Image();
+    im.onload = () => {
+      const MAX = 420, sc = Math.min(1, MAX / Math.max(im.width, im.height));
+      const c = document.createElement('canvas'); c.width = Math.round(im.width * sc); c.height = Math.round(im.height * sc);
+      const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(im, 0, 0, c.width, c.height);
+      items[fileTarget].img = c.toDataURL('image/jpeg', .82);
+      URL.revokeObjectURL(url); renderItems();
+    };
+    im.onerror = () => { Egido.toast(t('puzzle.imgFail')); URL.revokeObjectURL(url); };
+    im.src = url;
+  };
+  $('#btnExample').onclick = () => writeConfig({ items: t('puzzle.ex').split('|').map(p => { const [e, w] = p.split(':'); return { img: 'emoji:' + e, word: w }; }), per: 5, time: 60, lives: 3 });
+
+  function readConfig() {
+    return { items: items.map(it => ({ img: it.img || '', word: up(it.word.trim()).replace(/\s+/g, ' ') })).filter(it => it.word),
+      per: +$('#per').value, time: +$('#time').value, lives: +$('#lives').value };
+  }
+  function writeConfig(c) {
+    items = (c.items || []).map(it => ({ img: it.img || '', word: it.word || '' }));
+    $('#per').value = c.per != null ? c.per : 5; $('#time').value = c.time != null ? c.time : 60; $('#lives').value = c.lives != null ? c.lives : 3;
+    renderItems();
+  }
+  function validate(c) {
+    if (!Array.isArray(c.items) || !c.items.length) return t('puzzle.errEmpty');
+    if (c.items.length < 2) return t('kablo.errMin');
+    return '';
+  }
+
+  // ---------- Oyun ----------
+  const G = { cfg: null, running: false, rounds: [], ri: 0, score: 0, correct: 0, wrong: 0, missed: [], t0: 0, lives: 3, sel: null, drag: null, timer: null, timeLeft: 0, locked: false, combo: 0 };
+  let round = []; // bu turdaki çiftler: [{img, word, done}]
+  let rightOrder = [];
+
+  function startGame(cfg) {
+    G.cfg = cfg;
+    Object.assign(G, { running: true, ri: 0, score: 0, correct: 0, wrong: 0, missed: [], t0: performance.now(), lives: cfg.lives || Infinity, sel: null, drag: null, locked: false, combo: 0 });
+    const all = shuffle(cfg.items), per = cfg.per || all.length;
+    G.rounds = []; for (let i = 0; i < all.length; i += per) G.rounds.push(all.slice(i, i + per));
+    // son tur tek çift kaldıysa bir öncekiyle birleştir
+    if (G.rounds.length > 1 && G.rounds[G.rounds.length - 1].length < 2) { const last = G.rounds.pop(); G.rounds[G.rounds.length - 1].push(...last); }
+    document.body.classList.add('playing');
+    const p = Egido.player; $('#hudPlayer').textContent = '👤 ' + p.name + (p.cls ? ' · ' + p.cls : '');
+    $('#hudTime').classList.toggle('hidden', !cfg.time);
+    $('#hudLives').classList.toggle('hidden', !cfg.lives);
+    $('#board').style.visibility = 'hidden'; $('#wires').innerHTML = '';
+    Egido.countdown(3, () => { $('#board').style.visibility = ''; showRound(); }, () => G.running);
+  }
+  function updateHud() {
+    $('#hudScore').textContent = '⭐ ' + G.score;
+    $('#hudLeft').textContent = `💡 ${G.correct}/${G.cfg.items.length}`;
+    $('#hudRound').textContent = G.rounds.length > 1 ? t('kablo.round', { r: G.ri + 1, n: G.rounds.length }) : '';
+    if (G.cfg.lives) $('#hudLives').textContent = '❤'.repeat(Math.max(0, G.lives)) + '🖤'.repeat(Math.max(0, G.cfg.lives - G.lives));
+  }
+
+  function showRound() {
+    if (!G.running) return;
+    round = G.rounds[G.ri].map(it => ({ img: it.img, word: it.word, done: false }));
+    rightOrder = shuffle(round.map((_, i) => i));
+    for (let k = 0; k < 5 && rightOrder.every((v, i) => v === i) && round.length > 1; k++) rightOrder = shuffle(rightOrder);
+    G.sel = null; G.drag = null; G.locked = false;
+    $('#fb').textContent = ''; $('#fb').classList.remove('bad');
+    const avail = window.innerHeight - 64 - 16 - (round.length - 1) * 10;
+    document.documentElement.style.setProperty('--nh', Math.max(56, Math.min(110, Math.floor(avail / round.length) - 6)) + 'px');
+    $('#colL').innerHTML = round.map((it, i) => `<div class="node left" data-i="${i}"><div class="pic">${it.img ? (it.img.startsWith('emoji:') ? escapeHtml(it.img.slice(6)) : `<img src="${escapeHtml(it.img)}" alt="">`) : '❔'}</div><div class="plug"></div></div>`).join('');
+    $('#colR').innerHTML = rightOrder.map(i => `<div class="node right" data-i="${i}"><div class="plug"></div><div class="txt">${escapeHtml(round[i].word)}</div><div class="bulb">💡</div></div>`).join('');
+    $('#wires').innerHTML = '<path class="drag" id="dragPath" d=""></path>';
+    updateHud(); startTimer();
+  }
+
+  // ---------- Kablo çizimi ----------
+  const plugPos = (el) => { const p = el.querySelector('.plug').getBoundingClientRect(), g = $('#game').getBoundingClientRect(); return { x: p.left + p.width / 2 - g.left, y: p.top + p.height / 2 - g.top }; };
+  const curve = (a, b) => { const dx = Math.max(60, Math.abs(b.x - a.x) * .45); return `M${a.x},${a.y} C${a.x + dx},${a.y} ${b.x - dx},${b.y} ${b.x},${b.y}`; };
+  function addWire(a, b, cls) {
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('d', curve(a, b)); p.setAttribute('class', cls); $('#wires').insertBefore(p, $('#dragPath')); return p;
+  }
+  function redrawWires() { // boyut değişince sabit kabloları yeniden hesapla
+    $('#wires').querySelectorAll('path.ok').forEach(p => { const l = $(`#colL .node[data-i="${p.dataset.l}"]`), r = $(`#colR .node[data-i="${p.dataset.l}"]`); if (l && r) p.setAttribute('d', curve(plugPos(l), plugPos(r))); });
+  }
+  window.addEventListener('resize', () => { if (G.running) redrawWires(); });
+
+  // ---------- Etkileşim: sürükle ya da dokun-dokun ----------
+  const nodeAt = (x, y, side) => { const el = document.elementFromPoint(x, y); const n = el && el.closest('.node.' + side); return n && !n.classList.contains('ok') ? n : null; };
+  const board = $('#board');
+  board.addEventListener('pointerdown', e => {
+    if (!G.running || G.locked) return;
+    const l = e.target.closest('.node.left');
+    if (l && !l.classList.contains('ok')) { select(l); G.drag = { id: e.pointerId }; board.setPointerCapture(e.pointerId); updateDrag(e.clientX, e.clientY); return; }
+    const r = e.target.closest('.node.right');
+    if (r && G.sel && !r.classList.contains('ok')) connect(G.sel, r);
+  });
+  board.addEventListener('pointermove', e => { if (G.drag && G.drag.id === e.pointerId) updateDrag(e.clientX, e.clientY); });
+  board.addEventListener('pointerup', e => {
+    if (!G.drag || G.drag.id !== e.pointerId) return;
+    G.drag = null; $('#dragPath').setAttribute('d', '');
+    const r = nodeAt(e.clientX, e.clientY, 'right');
+    if (r && G.sel) connect(G.sel, r); // bırakılan yerde kelime yoksa seçim kalır, dokunarak tamamlanabilir
+  });
+  board.addEventListener('pointercancel', () => { G.drag = null; $('#dragPath').setAttribute('d', ''); });
+  function select(l) { document.querySelectorAll('.node.sel').forEach(n => n.classList.remove('sel')); G.sel = l; l.classList.add('sel'); sfx.click(); }
+  function updateDrag(cx, cy) {
+    if (!G.sel) return;
+    const g = $('#game').getBoundingClientRect();
+    $('#dragPath').setAttribute('d', curve(plugPos(G.sel), { x: cx - g.left, y: cy - g.top }));
+  }
+  function connect(l, r) {
+    const li = +l.dataset.i, ri = +r.dataset.i;
+    const a = plugPos(l), b = plugPos(r);
+    l.classList.remove('sel'); G.sel = null; $('#dragPath').setAttribute('d', '');
+    if (li === ri) { // doğru: ışık yanar
+      const w = addWire(a, b, 'ok'); w.dataset.l = li;
+      l.classList.add('ok'); r.classList.add('ok'); round[li].done = true;
+      G.combo++; const bonus = Math.min(G.combo - 1, 5) * 2, pts = 10 + bonus;
+      G.score += pts; G.correct++;
+      $('#fb').classList.remove('bad'); $('#fb').textContent = t('kablo.lit', { p: pts });
+      sfx.good(); tone(1320, .25, 'sine', .12, .05);
+      updateHud();
+      if (round.every(x => x.done)) { G.locked = true; stopTimer(); setTimeout(nextRound, 1100); }
+    } else { // yanlış: kısa devre
+      const w = addWire(a, b, 'bad'); setTimeout(() => w.remove(), 500);
+      sparks(b.x, b.y); sparks(a.x, a.y);
+      l.classList.add('hit'); r.classList.add('hit'); setTimeout(() => { l.classList.remove('hit'); r.classList.remove('hit'); }, 500);
+      G.combo = 0; G.wrong++; G.score = Math.max(0, G.score - 5);
+      if (G.cfg.lives) G.lives--;
+      $('#fb').classList.add('bad'); $('#fb').textContent = t('kablo.short');
+      sfx.bad(); tone(90, .4, 'sawtooth', .25, 0, 40);
+      const fb = $('#flashBad'); fb.classList.add('on'); requestAnimationFrame(() => requestAnimationFrame(() => fb.classList.remove('on')));
+      updateHud();
+      if (G.cfg.lives && G.lives <= 0) { G.locked = true; stopTimer(); setTimeout(() => endGame('lose'), 900); }
+    }
+  }
+  function sparks(x, y) {
+    for (let i = 0; i < 12; i++) {
+      const s = document.createElement('div'); s.className = 'spark';
+      const a = Math.random() * Math.PI * 2, d = 30 + Math.random() * 60;
+      s.style.left = x - 4 + 'px'; s.style.top = y - 4 + 'px'; s.style.setProperty('--dx', Math.cos(a) * d + 'px'); s.style.setProperty('--dy', Math.sin(a) * d + 'px');
+      s.style.background = Math.random() < .5 ? '#ffd43b' : '#fff';
+      $('#game').appendChild(s); setTimeout(() => s.remove(), 650);
+    }
+  }
+
+  function startTimer() {
+    stopTimer();
+    if (!G.cfg.time) return;
+    G.timeLeft = G.cfg.time; $('#hudTime').textContent = '⏱ ' + G.timeLeft; $('#hudTime').style.color = '';
+    let last = performance.now();
+    G.timer = setInterval(() => {
+      const now = performance.now(); G.timeLeft -= (now - last) / 1000; last = now;
+      const s = Math.max(0, Math.ceil(G.timeLeft)); $('#hudTime').textContent = '⏱ ' + s; $('#hudTime').style.color = s <= 5 ? '#ffd1cc' : '';
+      if (G.timeLeft <= 0) { stopTimer(); timeUp(); }
+    }, 100);
+  }
+  function stopTimer() { if (G.timer) { clearInterval(G.timer); G.timer = null; } }
+  function timeUp() {
+    G.locked = true; G.sel = null; G.drag = null; $('#dragPath').setAttribute('d', '');
+    // kalan çiftleri göster (gri kablo), kaçırılanlara say
+    round.forEach((it, i) => { if (!it.done) { G.missed.push(it.word); const l = $(`#colL .node[data-i="${i}"]`), r = $(`#colR .node[data-i="${i}"]`); const w = addWire(plugPos(l), plugPos(r), 'ok'); w.style.stroke = '#95a5a6'; } });
+    $('#fb').classList.add('bad'); $('#fb').textContent = t('kablo.timeUp'); sfx.lose();
+    setTimeout(nextRound, 2200);
+  }
+  function nextRound() {
+    if (!G.running) return;
+    G.ri++;
+    if (G.ri >= G.rounds.length) endGame(); else showRound();
+  }
+  $('#btnQuit').onclick = () => { if (G.running && confirm(t('puzzle.quitConfirm'))) endGame('quit'); };
+
+  function endGame(kind) {
+    G.running = false; stopTimer();
+    document.body.classList.remove('playing');
+    const total = G.cfg.items.length, time = (performance.now() - G.t0) / 1000;
+    // yarım kalan turun bağlanmamış çiftleri de kaçırılanlara eklenir
+    if (kind === 'lose') round.forEach(it => { if (!it.done && !G.missed.includes(it.word)) G.missed.push(it.word); });
+    const r = { kind: kind || (G.correct === total ? 'win' : 'lose'), score: G.score, correct: G.correct, total, wrong: G.wrong, time, missed: G.missed, missedTitle: t('kablo.missed') };
+    if (kind === 'quit') { r.emoji = '🚪'; }
+    else if (kind === 'lose') { r.emoji = '⚡'; r.title = t('kablo.lost'); r.msg = t('kablo.lostMsg', { t: total, c: G.correct }); sfx.lose(); }
+    else if (r.kind === 'win' && G.wrong === 0) { r.emoji = '💡'; r.title = t('kablo.perfect'); r.msg = t('kablo.perfectMsg'); sfx.win(); }
+    else { r.emoji = G.correct >= total / 2 ? '🎉' : '💪'; r.title = r.kind === 'win' ? t('res.won') : t('res.over'); r.msg = t('kablo.overMsg', { t: total, c: G.correct, w: G.wrong }); (G.correct >= total / 2 ? sfx.win : sfx.lose)(); }
+    Egido.finish(r);
+  }
+
+  renderItems();
+  Egido.init({
+    gameId: 'kablo', emoji: '🔌',
+    introRules: () => t('kablo.rules'),
+    readConfig, writeConfig, validate,
+    summary: c => t('kablo.summary', { n: (c.items || []).length }),
+    startGame,
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Egido</title>
+<link rel="icon" type="image/svg+xml" href="../../shared/logo.svg">
+<link rel="stylesheet" href="../../shared/egido.css?v=202610042202">
+<style>
+  .ta-ok { border-color: #bfe9cf; } .ta-ok:focus { border-color: var(--ok); }
+  .ta-bad { border-color: #f5c6c1; } .ta-bad:focus { border-color: var(--bad); }
+  body.playing { background: linear-gradient(180deg, #0b3d91 0%, #1f6fb2 30%, #2e9e4f 30%, #2e9e4f 100%); }
+  canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: pointer; }
+  .hud .lives { letter-spacing: 2px; font-size: 18px; }
+  .qbar { position: absolute; top: 58px; left: 0; right: 0; padding: 6px 18px; text-align: center; pointer-events: none; z-index: 2; }
+  .qbar div { display: inline-block; max-width: min(1100px, 96%); background: rgba(0,0,0,.35); backdrop-filter: blur(4px); color: #fff;
+    border-radius: 16px; padding: 10px 22px; font-weight: 800; font-size: clamp(20px, 3.2vw, 34px); line-height: 1.25; text-shadow: 0 2px 6px rgba(0,0,0,.4); }
+  .flashBad { position: fixed; inset: 0; pointer-events: none; z-index: 3; box-shadow: inset 0 0 140px rgba(231,76,60,0); transition: box-shadow .35s; }
+  .flashBad.on { box-shadow: inset 0 0 140px rgba(231,76,60,.75); transition: none; }
+</style>
+</head>
+<body>
+
+<!-- ===================== ÖĞRETMEN KURULUM ===================== -->
+<div id="setup" class="screen">
+  <div class="card">
+    <div id="teacherBarHost"></div>
+    <h1 data-i18n="gol.title"></h1>
+    <p class="sub" data-i18n="gol.sub"></p>
+
+    <label for="question" data-i18n="balon.q"></label>
+    <input type="text" id="question" data-i18n-ph="balon.qPh" maxlength="160">
+
+    <div class="cols">
+      <div>
+        <label for="correct" data-i18n="balon.correct"></label>
+        <textarea id="correct" class="ta-ok" data-i18n-ph="balon.correctPh"></textarea>
+      </div>
+      <div>
+        <label for="wrong" data-i18n="balon.wrong"></label>
+        <textarea id="wrong" class="ta-bad" data-i18n-ph="balon.wrongPh"></textarea>
+      </div>
+    </div>
+
+    <div class="cols three">
+      <div>
+        <label for="speed" data-i18n="balon.speed"></label>
+        <select id="speed"><option value="1" data-i18n="balon.speed1"></option><option value="2" selected data-i18n="balon.speed2"></option><option value="3" data-i18n="balon.speed3"></option><option value="4" data-i18n="balon.speed4"></option></select>
+      </div>
+      <div>
+        <label for="lives" data-i18n="balon.lives"></label>
+        <select id="lives"><option value="1">1</option><option value="3" selected>3</option><option value="5">5</option><option value="0" data-i18n="balon.unlimited"></option></select>
+      </div>
+      <div>
+        <label for="duration" data-i18n="balon.duration"></label>
+        <select id="duration"><option value="0" data-i18n="balon.noTime"></option><option value="30">30 s</option><option value="60">60 s</option><option value="90" selected>90 s</option><option value="120" data-i18n="balon.min2"></option></select>
+      </div>
+    </div>
+    <p class="hint" data-i18n="gol.hint"></p>
+
+    <div class="err" id="setupErr"></div>
+    <div class="row">
+      <button class="btn" id="btnStart" data-i18n="setup.try"></button>
+      <button class="btn" id="btnShare" data-i18n="setup.code"></button>
+      <button class="btn secondary" id="btnLbSetup" data-i18n="setup.lb"></button>
+      <button class="btn secondary" id="btnExample" data-i18n="setup.example"></button>
+    </div>
+    <div id="sharePanelHost"></div>
+  </div>
+</div>
+
+<!-- ===================== OYUN ===================== -->
+<div id="game" class="screen hidden">
+  <div class="hud">
+    <div class="pill" id="hudPlayer">👤</div>
+    <div class="pill progress" id="hudScore">⭐ 0</div>
+    <div class="q"></div>
+    <div class="pill progress" id="hudLeft">⚽ 0/0</div>
+    <div class="pill lives" id="hudLives">❤❤❤</div>
+    <div class="pill progress" id="hudTime">⏱ 90</div>
+    <div class="pill pauseBtn" id="btnPause">⏸</div>
+  </div>
+  <div class="qbar"><div id="hudQ"></div></div>
+  <canvas id="c"></canvas>
+  <div class="flashBad" id="flashBad"></div>
+  <div id="countdown" class="hidden"></div>
+  <div id="pauseOverlay" class="hidden">
+    <div class="card" style="width:auto;text-align:center">
+      <h2 style="margin-top:0" data-i18n="balon.paused"></h2>
+      <div class="row" style="justify-content:center">
+        <button class="btn" id="btnResume" data-i18n="balon.resume"></button>
+        <button class="btn secondary" id="btnQuit" data-i18n="balon.quit"></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../../shared/config.js?v=202610042202"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="../../shared/i18n.js?v=202610042202"></script>
+<script src="../../shared/egido.js?v=202610042202"></script>
+<script>
+(() => {
+  'use strict';
+  const $ = s => document.querySelector(s);
+  const t = I18N.t;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  const ease = x => 1 - Math.pow(1 - x, 3);
+  const { sfx, tone } = Egido;
+
+  // ---------- Ayarlar (Balon Patlat ile aynı model) ----------
+  const parseLines = s => [...new Set(s.split('\n').map(x => x.trim()).filter(Boolean))];
+  function readConfig() {
+    return { q: $('#question').value.trim(), correct: parseLines($('#correct').value), wrong: parseLines($('#wrong').value),
+      speed: +$('#speed').value, lives: +$('#lives').value, duration: +$('#duration').value };
+  }
+  function writeConfig(c) {
+    $('#question').value = c.q || '';
+    $('#correct').value = (c.correct || []).join('\n');
+    $('#wrong').value = (c.wrong || []).join('\n');
+    $('#speed').value = c.speed != null ? c.speed : 2;
+    $('#lives').value = c.lives != null ? c.lives : 3;
+    $('#duration').value = c.duration != null ? c.duration : 90;
+  }
+  function validate(c) {
+    if (!Array.isArray(c.correct) || !c.correct.length) return t('balon.errCorrect');
+    if (!Array.isArray(c.wrong) || !c.wrong.length) return t('balon.errWrong');
+    const lowWrong = c.wrong.map(w => w.toLocaleLowerCase());
+    const dup = c.correct.filter(x => lowWrong.includes(x.toLocaleLowerCase()));
+    if (dup.length) return t('balon.errDup', { d: dup.join(', ') });
+    return '';
+  }
+  $('#btnExample').onclick = () => writeConfig({ q: t('balon.exQ'), correct: t('balon.exCorrect').split('|'), wrong: t('balon.exWrong').split('|'), speed: 2, lives: 3, duration: 90 });
+
+  // ---------- Sahne ----------
+  const canvas = $('#c'), ctx = canvas.getContext('2d');
+  let W = 0, H = 0, DPR = 1, TOP = 120;
+  const L = {}; // yerleşim: kale, kaleci, oyuncu, yol
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = canvas.clientWidth; H = canvas.clientHeight;
+    canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    const qb = $('#hudQ').getBoundingClientRect(); TOP = Math.max(100, qb.bottom + 10);
+    const gw = clamp(W * .5, 260, 460);
+    L.goal = { x: W / 2, w: gw, h: gw * .36, y: TOP + 26 };            // y = üst direk
+    L.goalLine = L.goal.y + L.goal.h;
+    L.laneY = H - 70;                                                   // topların yuvarlandığı yol
+    L.player = { x: W / 2, y: L.laneY - 18 };                           // futbolcu yolun önünde
+    L.ballR = clamp(W / 28, 20, 28);
+  }
+  window.addEventListener('resize', () => { if (G.running) resize(); });
+
+  const G = { cfg: null, running: false, paused: false, balls: [], shot: null, particles: [], floaters: [], score: 0, lives: 3,
+    remaining: new Set(), onScreen: new Set(), goals: 0, misses: 0, combo: 0, elapsed: 0, timeLeft: 0, spawnT: 0, last: 0, raf: 0, shakeT: 0,
+    keeper: { x: 0, target: 0, dive: 0, t: 0 }, kick: 0, netShake: 0, dir: 1 };
+
+  function makeBall(text, isCorrect) {
+    ctx.font = `700 16px "Segoe UI", system-ui, sans-serif`;
+    const bw = clamp(ctx.measureText(text).width + 24, 60, 220);
+    const fromRight = Math.random() < .5;
+    const last = G.balls.filter(b => b.fromRight === fromRight).sort((a, b) => fromRight ? b.x - a.x : a.x - b.x)[0];
+    let x = fromRight ? W + bw / 2 + 10 : -bw / 2 - 10;
+    if (last) x = fromRight ? Math.max(x, last.x + last.bw / 2 + bw / 2 + 30) : Math.min(x, last.x - last.bw / 2 - bw / 2 - 30);
+    const base = [40, 65, 95, 130][G.cfg.speed - 1];
+    return { text, isCorrect, bw, fromRight, x, y: L.laneY, vx: (fromRight ? -1 : 1) * base * rand(.85, 1.15), rot: 0 };
+  }
+  function spawn() {
+    const maxOnScreen = clamp(Math.round(W / 170), 3, 7);
+    if (G.balls.length >= maxOnScreen) return;
+    const availCorrect = [...G.remaining].filter(a => !G.onScreen.has(a));
+    const availWrong = G.cfg.wrong.filter(a => !G.onScreen.has(a));
+    const pCorrect = G.remaining.size <= 2 ? .6 : .45;
+    let text, isCorrect;
+    if (availCorrect.length && (Math.random() < pCorrect || !availWrong.length)) { text = pick(availCorrect); isCorrect = true; }
+    else if (availWrong.length) { text = pick(availWrong); isCorrect = false; }
+    else if (availCorrect.length) { text = pick(availCorrect); isCorrect = true; }
+    else return;
+    G.onScreen.add(text);
+    G.balls.push(makeBall(text, isCorrect));
+  }
+
+  function startGame(cfg) {
+    G.cfg = cfg;
+    Object.assign(G, { running: true, paused: false, balls: [], shot: null, particles: [], floaters: [], score: 0, lives: cfg.lives || Infinity,
+      remaining: new Set(cfg.correct), onScreen: new Set(), goals: 0, misses: 0, combo: 0, elapsed: 0, timeLeft: cfg.duration || Infinity,
+      spawnT: .4, shakeT: 0, kick: 0, netShake: 0 });
+    document.body.classList.add('playing');
+    $('#hudQ').textContent = cfg.q || t('gol.default');
+    const p = Egido.player; $('#hudPlayer').textContent = '👤 ' + p.name + (p.cls ? ' · ' + p.cls : '');
+    $('#hudTime').classList.toggle('hidden', !cfg.duration);
+    $('#hudLives').classList.toggle('hidden', !cfg.lives);
+    $('#pauseOverlay').classList.add('hidden');
+    resize(); G.keeper = { x: L.goal.x, target: L.goal.x, dive: 0, t: 0 };
+    updateHud(); draw();
+    Egido.countdown(3, () => { G.last = performance.now(); G.raf = requestAnimationFrame(loop); }, () => G.running);
+  }
+  function updateHud() {
+    $('#hudScore').textContent = '⭐ ' + G.score;
+    $('#hudLeft').textContent = `⚽ ${G.cfg.correct.length - G.remaining.size}/${G.cfg.correct.length}`;
+    if (G.cfg.lives) $('#hudLives').textContent = '❤'.repeat(Math.max(0, G.lives)) + '🖤'.repeat(Math.max(0, G.cfg.lives - G.lives));
+    if (G.cfg.duration) { const s = Math.max(0, Math.ceil(G.timeLeft)); $('#hudTime').textContent = '⏱ ' + s; $('#hudTime').style.color = s <= 10 ? '#ffd1cc' : ''; }
+  }
+
+  // ---------- Döngü ----------
+  function loop(now) {
+    if (!G.running) return;
+    const dt = Math.min(.05, (now - G.last) / 1000); G.last = now;
+    if (!G.paused) update(dt);
+    if (!G.running) return;
+    draw();
+    G.raf = requestAnimationFrame(loop);
+  }
+  function update(dt) {
+    G.elapsed += dt;
+    if (G.cfg.duration) {
+      const before = Math.ceil(G.timeLeft); G.timeLeft -= dt;
+      if (Math.ceil(G.timeLeft) !== before && G.timeLeft <= 10 && G.timeLeft > 0) sfx.tick();
+      if (G.timeLeft <= 0) { G.timeLeft = 0; updateHud(); return endGame(G.remaining.size === 0 ? 'win' : 'timeout'); }
+      updateHud();
+    }
+    const interval = [2.0, 1.6, 1.25, 1.0][G.cfg.speed - 1];
+    G.spawnT -= dt;
+    if (G.spawnT <= 0) { spawn(); G.spawnT = interval * rand(.8, 1.2); }
+
+    for (let i = G.balls.length - 1; i >= 0; i--) {
+      const b = G.balls[i];
+      b.x += b.vx * dt; b.rot += (b.vx / L.ballR) * dt;
+      if ((b.vx < 0 && b.x < -b.bw) || (b.vx > 0 && b.x > W + b.bw)) { G.balls.splice(i, 1); G.onScreen.delete(b.text); }
+    }
+    // Kaleci: boşta hafif salınır, şutta hedefe atlar
+    const k = G.keeper; k.t += dt;
+    if (!G.shot) { k.target = L.goal.x + Math.sin(k.t * 1.3) * L.goal.w * .18; k.dive *= .9; }
+    k.x += (k.target - k.x) * Math.min(1, dt * (G.shot ? 7 : 3));
+
+    if (G.shot) updateShot(dt);
+    if (G.kick > 0) G.kick -= dt;
+    if (G.netShake > 0) G.netShake -= dt;
+    for (let i = G.particles.length - 1; i >= 0; i--) {
+      const p = G.particles[i]; p.life -= dt;
+      if (p.life <= 0) { G.particles.splice(i, 1); continue; }
+      p.vy += 500 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
+    }
+    for (let i = G.floaters.length - 1; i >= 0; i--) { const f = G.floaters[i]; f.life -= dt; f.y -= 50 * dt; if (f.life <= 0) G.floaters.splice(i, 1); }
+    if (G.shakeT > 0) G.shakeT -= dt;
+  }
+
+  // ---------- Şut ----------
+  function shoot(i) {
+    const b = G.balls.splice(i, 1)[0];
+    G.onScreen.delete(b.text);
+    const g = L.goal;
+    let outcome, tx, ty;
+    if (b.isCorrect) { // köşeye gider, kaleci ters köşeye atlar
+      const side = Math.random() < .5 ? -1 : 1;
+      tx = g.x + side * g.w * rand(.28, .42); ty = L.goalLine - g.h * rand(.15, .75); outcome = 'goal';
+      G.keeper.target = g.x - side * g.w * .3; G.keeper.dive = -side;
+    } else if (Math.random() < .55) { // kaleci kurtarır
+      tx = g.x + rand(-g.w * .2, g.w * .2); ty = L.goalLine - g.h * rand(.25, .6); outcome = 'save';
+      G.keeper.target = tx; G.keeper.dive = Math.sign(tx - G.keeper.x) || 1;
+    } else { // dışarı: direğin yanı ya da üstü
+      const side = Math.random() < .5 ? -1 : 1;
+      if (Math.random() < .5) { tx = g.x + side * (g.w / 2 + rand(30, 70)); ty = L.goalLine - g.h * rand(.1, .7); }
+      else { tx = g.x + rand(-g.w * .4, g.w * .4); ty = g.y - rand(30, 70); }
+      outcome = 'out';
+    }
+    // önce top oyuncunun önüne kayar (0.18 s), sonra şut (0.6 s)
+    G.shot = { b, phase: 'approach', t: 0, sx: b.x, sy: b.y, px: L.player.x, py: L.player.y + 14, tx, ty, outcome, x: b.x, y: b.y, s: 1, rot: b.rot };
+  }
+  function updateShot(dt) {
+    const s = G.shot; s.t += dt;
+    if (s.phase === 'approach') {
+      const k = Math.min(1, s.t / .18);
+      s.x = s.sx + (s.px - s.sx) * k; s.y = s.sy + (s.py - s.sy) * k; s.rot += 10 * dt;
+      if (k >= 1) { s.phase = 'fly'; s.t = 0; G.kick = .3; tone(140, .12, 'square', .18, 0, 60); }
+    } else if (s.phase === 'fly') {
+      const k = Math.min(1, s.t / .6), e = ease(k);
+      s.x = s.px + (s.tx - s.px) * e; s.y = s.py + (s.ty - s.py) * e - Math.sin(k * Math.PI) * 60;
+      s.s = 1 - .45 * e; s.rot += 14 * dt;
+      if (k >= 1) resolveShot();
+    } else if (s.phase === 'after') {
+      if (s.outcome === 'save') { s.x += s.vx * dt; s.y += s.vy * dt; s.vy += 600 * dt; s.rot += 8 * dt; }
+      if (s.t > .9) { G.shot = null; afterShot(); }
+    }
+  }
+  function resolveShot() {
+    const s = G.shot; s.phase = 'after'; s.t = 0;
+    if (s.outcome === 'goal') {
+      G.netShake = .5; G.combo++;
+      const bonus = Math.min(G.combo - 1, 5) * 2, pts = 10 + bonus;
+      G.score += pts; G.goals++; G.remaining.delete(s.b.text);
+      floater(t('gol.goal') + (bonus ? ' +' + pts + ' 🔥' : ' +' + pts), L.goal.x, L.goalLine + 50, '#fff', 56);
+      confetti(L.goal.x, L.goal.y + L.goal.h / 2); sfx.win();
+    } else {
+      G.combo = 0; G.misses++; G.score = Math.max(0, G.score - 5);
+      if (G.cfg.lives) G.lives--;
+      if (s.outcome === 'save') { s.vx = (s.x < L.goal.x ? -1 : 1) * rand(120, 220); s.vy = -rand(150, 250); tone(240, .15, 'square', .2); }
+      floater(t(s.outcome === 'save' ? 'gol.saved' : 'gol.out'), L.goal.x, L.goalLine + 50, '#ffb3ab', 44);
+      sfx.bad(); G.shakeT = .3;
+      const fb = $('#flashBad'); fb.classList.add('on'); requestAnimationFrame(() => requestAnimationFrame(() => fb.classList.remove('on')));
+    }
+    updateHud();
+  }
+  function afterShot() {
+    if (G.remaining.size === 0) return endGame('win');
+    if (G.cfg.lives && G.lives <= 0) return endGame('lose');
+  }
+  const floater = (text, x, y, color, size = 30) => G.floaters.push({ text, x, y, color, size, life: 1.1 });
+  function confetti(x, y) {
+    const cols = ['#ffd43b', '#ff6b6b', '#4dabf7', '#69db7c', '#f783ac', '#fff'];
+    for (let i = 0; i < 40; i++) { const a = rand(0, Math.PI * 2), sp = rand(150, 450), life = rand(.6, 1.2);
+      G.particles.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 200, life, max: life, s: rand(6, 12), rot: rand(0, 6), vr: rand(-10, 10), color: pick(cols) }); }
+  }
+
+  // ---------- Çizim ----------
+  function drawPitch() {
+    // çim şeritleri
+    for (let i = 0; i < 8; i++) { ctx.fillStyle = i % 2 ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.04)'; const y0 = TOP - 10 + (H - TOP) * i / 8; ctx.fillRect(0, y0, W, (H - TOP) / 8 + 1); }
+    // ceza sahası çizgileri
+    ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 3;
+    const g = L.goal, bw = g.w * 1.9, bh = g.h * 2.1;
+    ctx.strokeRect(g.x - bw / 2, L.goalLine, bw, bh);
+    ctx.beginPath(); ctx.arc(g.x, L.goalLine + bh, bw * .22, 0, Math.PI, false); ctx.stroke();
+    ctx.beginPath(); ctx.arc(g.x, L.goalLine + bh * .72, 4, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill();
+    // yol (topların yuvarlandığı)
+    ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(0, L.laneY - L.ballR - 6, W, L.ballR * 2 + 12);
+    ctx.setLineDash([18, 14]); ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, L.laneY + L.ballR + 2); ctx.lineTo(W, L.laneY + L.ballR + 2); ctx.stroke(); ctx.setLineDash([]);
+  }
+  function drawGoal() {
+    const g = L.goal, sh = G.netShake > 0 ? Math.sin(G.netShake * 40) * 3 : 0;
+    ctx.save(); ctx.translate(sh, 0);
+    // ağ
+    ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.fillRect(g.x - g.w / 2, g.y, g.w, g.h);
+    ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 1;
+    for (let x = g.x - g.w / 2; x <= g.x + g.w / 2; x += 14) { ctx.beginPath(); ctx.moveTo(x, g.y); ctx.lineTo(x, g.y + g.h); ctx.stroke(); }
+    for (let y = g.y; y <= g.y + g.h; y += 14) { ctx.beginPath(); ctx.moveTo(g.x - g.w / 2, y); ctx.lineTo(g.x + g.w / 2, y); ctx.stroke(); }
+    // direkler
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 7; ctx.lineCap = 'round'; ctx.beginPath();
+    ctx.moveTo(g.x - g.w / 2, L.goalLine); ctx.lineTo(g.x - g.w / 2, g.y); ctx.lineTo(g.x + g.w / 2, g.y); ctx.lineTo(g.x + g.w / 2, L.goalLine); ctx.stroke();
+    ctx.restore();
+  }
+  function drawKeeper() {
+    const k = G.keeper, y = L.goalLine - 8, h = L.goal.h * .85, lean = clamp(k.dive, -1, 1) * .5;
+    ctx.save(); ctx.translate(k.x, y); ctx.rotate(lean);
+    ctx.fillStyle = '#f1c40f'; roundRect(-h * .22, -h * .75, h * .44, h * .55, 8); ctx.fill();          // forma
+    ctx.fillStyle = '#2c3e50'; roundRect(-h * .2, -h * .22, h * .4, h * .22, 6); ctx.fill();            // şort
+    ctx.fillStyle = '#f5cba7'; ctx.beginPath(); ctx.arc(0, -h * .88, h * .14, 0, Math.PI * 2); ctx.fill(); // kafa
+    ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = h * .11; ctx.lineCap = 'round'; ctx.beginPath();        // kollar açık
+    ctx.moveTo(-h * .2, -h * .65); ctx.lineTo(-h * .55 - lean * 20, -h * .9); ctx.moveTo(h * .2, -h * .65); ctx.lineTo(h * .55 - lean * 20, -h * .9); ctx.stroke();
+    ctx.fillStyle = '#27ae60'; ctx.beginPath(); ctx.arc(-h * .55 - lean * 20, -h * .9, h * .09, 0, Math.PI * 2); ctx.arc(h * .55 - lean * 20, -h * .9, h * .09, 0, Math.PI * 2); ctx.fill(); // eldiven
+    ctx.restore();
+  }
+  function drawPlayer() {
+    const p = L.player, h = clamp(H * .11, 70, 110), kick = G.kick > 0 ? Math.sin((.3 - G.kick) / .3 * Math.PI) : 0;
+    ctx.save(); ctx.translate(p.x, p.y);
+    ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(0, 4, h * .3, 7, 0, 0, Math.PI * 2); ctx.fill();   // gölge
+    ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = h * .1; ctx.lineCap = 'round'; ctx.beginPath();                        // bacaklar
+    ctx.moveTo(-h * .08, -h * .4); ctx.lineTo(-h * .14, 0); ctx.moveTo(h * .08, -h * .4); ctx.lineTo(h * .14 + kick * 18, -kick * 26); ctx.stroke();
+    ctx.fillStyle = '#e74c3c'; roundRect(-h * .2, -h * .78, h * .4, h * .42, 8); ctx.fill();                              // forma
+    ctx.fillStyle = '#fff'; ctx.font = `900 ${h * .18}px "Segoe UI", system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.fillText('10', 0, -h * .5);
+    ctx.fillStyle = '#f5cba7'; ctx.beginPath(); ctx.arc(0, -h * .9, h * .13, 0, Math.PI * 2); ctx.fill();                 // kafa
+    ctx.fillStyle = '#3d2b1f'; ctx.beginPath(); ctx.arc(0, -h * .95, h * .13, Math.PI, 0); ctx.fill();                   // saç
+    ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = h * .09; ctx.beginPath();                                                // kollar
+    ctx.moveTo(-h * .2, -h * .7); ctx.lineTo(-h * .34, -h * .45 - kick * 10); ctx.moveTo(h * .2, -h * .7); ctx.lineTo(h * .34, -h * .45 + kick * 10); ctx.stroke();
+    ctx.restore();
+  }
+  function drawBall(x, y, r, rot) {
+    ctx.save(); ctx.translate(x, y);
+    ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(2, r * .95, r * .9, r * .28, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.rotate(rot);
+    const g = ctx.createRadialGradient(-r * .3, -r * .3, r * .1, 0, 0, r); g.addColorStop(0, '#fff'); g.addColorStop(1, '#cfd6dc');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#1b2631';
+    for (let i = 0; i < 5; i++) { const a = i * Math.PI * 2 / 5; ctx.beginPath(); ctx.arc(Math.cos(a) * r * .55, Math.sin(a) * r * .55, r * .2, 0, Math.PI * 2); ctx.fill(); }
+    ctx.beginPath(); ctx.arc(0, 0, r * .17, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 0, r - .75, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+  function drawLabel(x, y, text, w) {
+    ctx.save(); ctx.font = `700 16px "Segoe UI", system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(255,255,255,.95)'; roundRect(x - w / 2, y - 16, w, 32, 10); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(x - 7, y + 16); ctx.lineTo(x + 7, y + 16); ctx.lineTo(x, y + 24); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#14233a'; fitText(text, x, y, w - 16); ctx.restore();
+  }
+  function fitText(text, x, y, maxW) {
+    let size = 16; ctx.font = `700 ${size}px "Segoe UI", system-ui, sans-serif`;
+    while (ctx.measureText(text).width > maxW && size > 10) { size--; ctx.font = `700 ${size}px "Segoe UI", system-ui, sans-serif`; }
+    ctx.fillText(text, x, y);
+  }
+  function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    ctx.save();
+    if (G.shakeT > 0) ctx.translate(rand(-6, 6), rand(-6, 6));
+    drawPitch(); drawGoal(); drawKeeper();
+    for (const b of G.balls) { drawBall(b.x, b.y, L.ballR, b.rot); drawLabel(b.x, b.y - L.ballR - 34, b.text, b.bw); }
+    const s = G.shot;
+    if (s && s.y > L.player.y - 10 && s.phase !== 'fly') { drawBall(s.x, s.y, L.ballR * s.s, s.rot); drawPlayer(); }
+    else { drawPlayer(); if (s) drawBall(s.x, s.y, L.ballR * s.s, s.rot); }
+    for (const p of G.particles) { ctx.save(); ctx.globalAlpha = clamp(p.life / p.max, 0, 1); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.color; ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * .6); ctx.restore(); }
+    for (const f of G.floaters) { ctx.save(); ctx.globalAlpha = clamp(f.life / 1.1, 0, 1); ctx.fillStyle = f.color; ctx.font = `900 ${f.size}px "Segoe UI", system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 10; ctx.fillText(f.text, f.x, f.y); ctx.restore(); }
+    ctx.restore();
+  }
+
+  // ---------- Etkileşim ----------
+  function hit(px, py) {
+    for (let i = G.balls.length - 1; i >= 0; i--) {
+      const b = G.balls[i];
+      const inBall = Math.hypot(px - b.x, py - b.y) <= L.ballR + 10;
+      const inLabel = Math.abs(px - b.x) <= b.bw / 2 && Math.abs(py - (b.y - L.ballR - 34)) <= 20;
+      if (inBall || inLabel) return i;
+    }
+    return -1;
+  }
+  canvas.addEventListener('pointerdown', e => {
+    if (!G.running || G.paused || G.shot) return;
+    const r = canvas.getBoundingClientRect(), i = hit(e.clientX - r.left, e.clientY - r.top);
+    if (i >= 0) shoot(i);
+  });
+  function setPaused(p) { if (!G.running) return; G.paused = p; $('#pauseOverlay').classList.toggle('hidden', !p); if (!p) G.last = performance.now(); }
+  $('#btnPause').onclick = () => setPaused(true);
+  $('#btnResume').onclick = () => setPaused(false);
+  $('#btnQuit').onclick = () => { setPaused(false); endGame('quit'); };
+  document.addEventListener('keydown', e => { if (G.running && (e.key === 'Escape' || e.key === 'p' || e.key === 'P')) setPaused(!G.paused); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && G.running) setPaused(true); });
+
+  // ---------- Bitiş ----------
+  function endGame(kind) {
+    G.running = false; cancelAnimationFrame(G.raf); G.shot = null;
+    document.body.classList.remove('playing');
+    $('#pauseOverlay').classList.add('hidden');
+    const total = G.cfg.correct.length, got = total - G.remaining.size;
+    const r = { kind, score: G.score, correct: got, total, wrong: G.misses, time: G.elapsed, missed: [...G.remaining], missedTitle: t('gol.missed') };
+    if (kind === 'win') { r.emoji = G.misses === 0 ? '🏆' : '🎉'; r.title = G.misses === 0 ? t('gol.perfect') : t('res.won'); r.msg = G.misses === 0 ? t('gol.perfectMsg') : t('gol.wonMsg', { w: G.misses }); sfx.win(); }
+    else if (kind === 'lose') { r.emoji = '🧤'; r.title = t('gol.lost'); r.msg = t('gol.lostMsg', { t: total, g: got }); sfx.lose(); }
+    else if (kind === 'timeout') { r.emoji = '⏰'; r.title = t('balon.timeout'); r.msg = t('gol.timeoutMsg', { t: total, g: got }); sfx.lose(); }
+    else { r.emoji = '🚪'; }
+    Egido.finish(r);
+  }
+
+  Egido.init({
+    gameId: 'gol', emoji: '⚽',
+    introRules: () => t('gol.rules'),
+    readConfig, writeConfig, validate,
+    summary: c => c.q || t('gol.default'),
+    startGame,
+  });
+})();
+</script>
+</body>
+</html>
