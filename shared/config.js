@@ -8,4 +8,7 @@
 window.BP_CONFIG = {
   supabaseUrl: '',
   supabaseAnonKey: '',
+  // Öğretmen kullanıcı adlarına eklenen alan adı: "ayse" → ayse@egido.local
+  // Supabase panelinde kullanıcıyı bu e-posta ile açın.
+  userDomain: 'egido.local',
 };
