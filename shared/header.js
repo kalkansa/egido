@@ -17,7 +17,7 @@ window.EgidoHeader = (() => {
     const user = esc(opts.session.user.email.replace('@' + ((window.BP_CONFIG || {}).userDomain || 'egido.local'), ''));
     const lang = window.I18N ? I18N.selectorHtml() : '';
     el.innerHTML = `
-      <a class="brand" href="${opts.root}"><img src="${opts.root}shared/logo.svg" alt="">Egido</a>
+      <a class="brand" href="${opts.root}"><img src="${opts.root}shared/logo.svg?v=202610051135" alt="">Karatahta</a>
       <nav class="topnav">
         <a href="${opts.root}" class="${opts.active === 'home' ? 'active' : ''}">🗂 ${t('home.myGames')}</a>
         <div class="menu">

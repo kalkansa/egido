@@ -1,8 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <!-- Egido: minimal yazı tahtası -->
-  <rect x="6" y="10" width="52" height="38" rx="6" fill="#ffffff" stroke="#1f6fb2" stroke-width="4"/>
-  <path d="M16 34 C 22 22, 28 22, 34 30 S 44 38, 48 26" fill="none" stroke="#ff9f1c" stroke-width="4" stroke-linecap="round"/>
-  <path d="M16 40 H 36" stroke="#2ecc71" stroke-width="4" stroke-linecap="round"/>
-  <rect x="18" y="50" width="28" height="4" rx="2" fill="#1f6fb2"/>
-  <path d="M24 54 L 20 60 M40 54 L 44 60" stroke="#1f6fb2" stroke-width="4" stroke-linecap="round"/>
+  <!-- Karatahta: ahşap çerçeveli yeşil tahta, tebeşir çizgileri -->
+  <rect x="4" y="8" width="56" height="42" rx="6" fill="#8b5a2b"/>
+  <rect x="9" y="13" width="46" height="32" rx="3" fill="#2f5d3f"/>
+  <path d="M16 33 C 21 22, 27 22, 32 29 S 41 36, 47 25" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" opacity=".95"/>
+  <path d="M16 39 H 33" stroke="#ffe066" stroke-width="3.5" stroke-linecap="round"/>
+  <rect x="14" y="50" width="36" height="4" rx="2" fill="#6e4422"/>
+  <rect x="18" y="47" width="7" height="3" rx="1.5" fill="#fff"/>
+  <rect x="27" y="47" width="7" height="3" rx="1.5" fill="#ffe066"/>
 </svg>

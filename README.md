@@ -1,4 +1,4 @@
-# Egido – Eğitim Oyunları
+# Karatahta (kod adı: Egido)
 
 Öğretmenin soru hazırladığı, öğrencilerin kodla katıldığı, skorların sınıf bazında
 listelendiği tarayıcı oyunları. Sunucu kodu yok: sayfalar GitHub Pages'ta statik durur,
