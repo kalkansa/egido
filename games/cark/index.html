@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Kara Tahta</title>
+<link rel="icon" type="image/svg+xml" href="../../shared/logo.svg?v=202610051644">
+<link rel="stylesheet" href="../../shared/egido.css?v=202610051644">
+<style>
+  /* ---------- Öğretmen: kategoriler ve sorular ---------- */
+  .cats { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+  .cat { background: #f1f5fb; border-radius: 14px; padding: 10px 12px; border-left: 8px solid var(--cc, #4dabf7); }
+  .cat .head { display: flex; gap: 8px; align-items: center; }
+  .cat .head input { flex: 1; margin: 0; font-weight: 700; }
+  .cat .rm, .cat .rmq { background: none; border: 0; color: var(--bad); font-size: 20px; cursor: pointer; padding: 4px 8px; }
+  .cat .qlist { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+  .cat .qrow { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr auto; gap: 6px; align-items: center; }
+  @media (max-width: 760px) { .cat .qrow { grid-template-columns: 1fr 1fr; } .cat .qrow .q { grid-column: 1 / -1; } }
+  .cat .qrow input { margin: 0; font-size: 13px; padding: 7px 9px; }
+  .cat .a-ok { border-color: #bfe9cf; background: #f4fff7; } .cat .a-ok:focus { border-color: var(--ok); }
+  .cat .a-bad { border-color: #f5c6c1; } .cat .a-bad:focus { border-color: var(--bad); }
+  .cat .addq { margin-top: 8px; }
+  .addrow { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+
+  /* ---------- Oyun ---------- */
+  body.playing { background: radial-gradient(circle at 50% 40%, #3b1f6b 0%, #1a0f3a 75%); }
+  .wheelWrap { position: absolute; inset: 0; padding-top: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+  canvas#wheel { touch-action: none; cursor: grab; max-width: 94vw; }
+  canvas#wheel.spinning { cursor: default; }
+  .spinBtn { font-size: 26px; padding: 14px 44px; }
+  .spinHint { color: rgba(255,255,255,.8); font-size: 15px; min-height: 20px; text-align: center; }
+  /* soru paneli */
+  #qpanel { position: absolute; inset: 0; z-index: 4; display: flex; align-items: center; justify-content: center; padding: 70px 16px 16px; background: rgba(10,5,30,.55); backdrop-filter: blur(3px); }
+  .qcard { width: min(760px, 100%); background: #fff; color: var(--ink); border-radius: 20px; padding: 22px 24px; box-shadow: 0 25px 60px rgba(0,0,0,.45); text-align: center; animation: pop .25s ease-out; }
+  @keyframes pop { from { transform: scale(.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .qcat { display: inline-block; color: #fff; font-weight: 800; padding: 6px 16px; border-radius: 999px; font-size: 15px; margin-bottom: 10px; }
+  .qtext { font-size: clamp(20px, 3.2vw, 32px); font-weight: 800; line-height: 1.3; margin-bottom: 18px; }
+  .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 520px) { .choices { grid-template-columns: 1fr; } }
+  .choice { font: inherit; font-size: clamp(18px, 2.8vw, 26px); font-weight: 800; padding: 16px 12px; border-radius: 16px; border: 3px solid transparent; background: #f1f5fb; color: var(--ink); cursor: pointer; box-shadow: 0 6px 0 #c9cfd8; transition: transform .08s; }
+  .choice:active { transform: translateY(5px); box-shadow: 0 1px 0 #c9cfd8; }
+  .choice.ok { background: #bff3cf; border-color: var(--ok); box-shadow: 0 6px 0 #1e8c4c; }
+  .choice.bad { background: #ffd0cb; border-color: var(--bad); box-shadow: 0 6px 0 #a93226; }
+  .choice[disabled] { cursor: default; }
+  .qfb { min-height: 30px; font-size: 20px; font-weight: 800; margin-top: 14px; }
+  .qfb.ok { color: #1e8c4c; } .qfb.bad { color: var(--bad); }
+</style>
+</head>
+<body>
+
+<!-- ===================== ÖĞRETMEN KURULUM ===================== -->
+<div id="setup" class="screen">
+  <div class="card">
+    <div id="teacherBarHost"></div>
+    <h1 data-i18n="cark.title"></h1>
+    <p class="sub" data-i18n="cark.sub"></p>
+    <div class="row" style="margin:0 0 4px"><button class="btn secondary small" id="btnExample" data-i18n="setup.example"></button></div>
+
+    <div class="cols three">
+      <div>
+        <label for="options" data-i18n="cark.options"></label>
+        <select id="options"><option value="3" data-i18n="penguen.blocks3"></option><option value="4" selected data-i18n="penguen.blocks4"></option></select>
+      </div>
+      <div>
+        <label for="lives" data-i18n="balon.lives"></label>
+        <select id="lives"><option value="0" selected data-i18n="balon.unlimited"></option><option value="3">3</option><option value="5">5</option></select>
+      </div>
+      <div>
+        <label for="time" data-i18n="puzzle.time"></label>
+        <select id="time"><option value="0" selected data-i18n="puzzle.noTime"></option><option value="15">15 s</option><option value="30">30 s</option><option value="45">45 s</option></select>
+      </div>
+    </div>
+
+    <label data-i18n="cark.cats"></label>
+    <div class="cats" id="cats"></div>
+    <div class="addrow">
+      <button class="btn secondary" id="btnAddCat" data-i18n="cark.addCat"></button>
+    </div>
+    <p class="hint" data-i18n="cark.help"></p>
+
+    <div class="err" id="setupErr"></div>
+    <div class="row">
+      <button class="btn" id="btnStart" data-i18n="setup.try"></button>
+      <button class="btn" id="btnShare" data-i18n="setup.code"></button>
+      <button class="btn secondary" id="btnLbSetup" data-i18n="setup.lb"></button>
+    </div>
+    <div id="sharePanelHost"></div>
+  </div>
+</div>
+
+<!-- ===================== OYUN ===================== -->
+<div id="game" class="screen hidden">
+  <div class="hud">
+    <div class="pill" id="hudPlayer">👤</div>
+    <div class="pill progress" id="hudScore">⭐ 0</div>
+    <div class="q"></div>
+    <div class="pill progress" id="hudProg">❓ 0/0</div>
+    <div class="pill lives" id="hudLives">❤❤❤</div>
+    <div class="pill progress" id="hudTime">⏱ 30</div>
+    <div class="pill pauseBtn" id="btnQuit">✕</div>
+  </div>
+  <div class="wheelWrap" id="wheelWrap">
+    <canvas id="wheel"></canvas>
+    <button class="btn spinBtn" id="btnSpin" data-i18n="cark.spin"></button>
+    <div class="spinHint" id="spinHint"></div>
+  </div>
+  <div id="qpanel" class="hidden">
+    <div class="qcard">
+      <div class="qcat" id="qcat"></div>
+      <div class="qtext" id="qtext"></div>
+      <div class="choices" id="choices"></div>
+      <div class="qfb" id="qfb"></div>
+    </div>
+  </div>
+  <div id="countdown" class="hidden"></div>
+</div>
+
+<script src="../../shared/config.js?v=202610051644"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="../../shared/i18n.js?v=202610051644"></script>
+<script src="../../shared/ui.js?v=202610051644"></script>
+<script src="../../shared/header.js?v=202610051644"></script>
+<script src="../../shared/egido.js?v=202610051644"></script>
+<script>
+(() => {
+  'use strict';
+  const $ = s => document.querySelector(s);
+  const t = I18N.t;
+  const { sfx, tone, escapeHtml, shuffle } = Egido;
+  const PALETTE = ['#ff6b6b', '#ffa94d', '#ffd43b', '#69db7c', '#4dabf7', '#9775fa', '#f783ac', '#63e6be', '#ff8787', '#74c0fc'];
+
+  // ---------- Öğretmen ----------
+  let cats = []; // [{ name, qs: [{ q, a, w: ['', '', ''] }] }]
+  const nWrong = () => +$('#options').value - 1;
+  function renderCats() {
+    const box = $('#cats'), nw = nWrong();
+    box.innerHTML = cats.map((c, i) => `
+      <div class="cat" data-i="${i}" style="--cc:${PALETTE[i % PALETTE.length]}">
+        <div class="head"><input type="text" class="cname" placeholder="${t('cark.catPh')}" maxlength="40" value="${escapeHtml(c.name)}"><button class="rm" title="${t('puzzle.remove')}">✕</button></div>
+        <div class="qlist">${c.qs.map((q, j) => `
+          <div class="qrow" data-j="${j}">
+            <input type="text" class="q" placeholder="${t('penguen.qPh')}" maxlength="160" value="${escapeHtml(q.q)}">
+            <input type="text" class="a a-ok" placeholder="${t('penguen.aPh')}" maxlength="40" value="${escapeHtml(q.a)}">
+            ${[0, 1, 2].slice(0, nw).map(k => `<input type="text" class="w a-bad" data-k="${k}" placeholder="${t('penguen.wPh', { n: k + 1 })}" maxlength="40" value="${escapeHtml(q.w[k] || '')}">`).join('')}
+            <button class="rmq" title="${t('puzzle.remove')}">✕</button>
+          </div>`).join('')}</div>
+        <button class="btn secondary small addq" data-i18n="cark.addQ">${t('cark.addQ')}</button>
+      </div>`).join('') || `<div class="hint">${t('cark.noCats')}</div>`;
+    box.querySelectorAll('.cat').forEach(cel => {
+      const i = +cel.dataset.i;
+      cel.querySelector('.cname').oninput = e => { cats[i].name = e.target.value; };
+      cel.querySelector('.rm').onclick = () => { cats.splice(i, 1); renderCats(); };
+      cel.querySelector('.addq').onclick = () => { cats[i].qs.push({ q: '', a: '', w: ['', '', ''] }); renderCats(); const rows = cel.parentNode.querySelectorAll(`.cat[data-i="${i}"] .qrow .q`); };
+      cel.querySelectorAll('.qrow').forEach(row => {
+        const j = +row.dataset.j, q = cats[i].qs[j];
+        row.querySelector('.q').oninput = e => { q.q = e.target.value; };
+        row.querySelector('.a').oninput = e => { q.a = e.target.value; };
+        row.querySelectorAll('.w').forEach(inp => inp.oninput = e => { q.w[+inp.dataset.k] = e.target.value; });
+        row.querySelector('.rmq').onclick = () => { cats[i].qs.splice(j, 1); renderCats(); };
+      });
+    });
+  }
+  document.addEventListener('egido:lang', renderCats);
+  $('#options').onchange = renderCats;
+  $('#btnAddCat').onclick = () => { cats.push({ name: '', qs: [{ q: '', a: '', w: ['', '', ''] }] }); renderCats(); const n = document.querySelectorAll('.cat .cname'); if (n.length) n[n.length - 1].focus(); };
+  $('#btnExample').onclick = () => writeConfig({ cats: t('cark.ex').split('|').map(cs => { const [name, qs] = cs.split('>'); return { name, qs: qs.split('~').map(s => { const p = s.split(';'); return { q: p[0], a: p[1], w: p.slice(2) }; }) }; }), options: 4, lives: 0, time: 0 });
+
+  function readConfig() {
+    const nw = nWrong();
+    return { cats: cats.map(c => ({ name: c.name.trim(), qs: c.qs.map(q => ({ q: q.q.trim(), a: q.a.trim(), w: q.w.slice(0, nw).map(x => (x || '').trim()) })).filter(q => q.q || q.a || q.w.some(Boolean)) })).filter(c => c.name || c.qs.length),
+      options: +$('#options').value, lives: +$('#lives').value, time: +$('#time').value };
+  }
+  function writeConfig(c) {
+    $('#options').value = c.options || 4; $('#lives').value = c.lives || 0; $('#time').value = c.time != null ? c.time : 0;
+    cats = (c.cats || []).map(x => ({ name: x.name || '', qs: (x.qs || []).map(q => ({ q: q.q || '', a: q.a || '', w: [...(q.w || []), '', '', ''].slice(0, 3) })) }));
+    renderCats();
+  }
+  function validate(c) {
+    if (!Array.isArray(c.cats) || !c.cats.length) return t('cark.errEmpty');
+    const nw = (c.options || 4) - 1;
+    for (let i = 0; i < c.cats.length; i++) {
+      const cat = c.cats[i];
+      if (!cat.name || !cat.qs.length) return t('cark.errCat', { n: i + 1 });
+      for (let j = 0; j < cat.qs.length; j++) {
+        const q = cat.qs[j];
+        if (!q.q || !q.a || q.w.length < nw || q.w.slice(0, nw).some(x => !x)) return t('cark.errQ', { c: cat.name, n: j + 1, w: nw });
+        const low = q.w.map(x => x.toLocaleLowerCase());
+        if (low.includes(q.a.toLocaleLowerCase()) || new Set(low).size !== low.length) return t('cark.errDup', { c: cat.name, n: j + 1 });
+      }
+    }
+    return '';
+  }
+
+  // ---------- Oyun ----------
+  const canvas = $('#wheel'), ctx = canvas.getContext('2d');
+  const G = { cfg: null, running: false, score: 0, correct: 0, wrong: 0, missed: [], t0: 0, lives: Infinity, total: 0, asked: 0,
+    angle: 0, omega: 0, spinning: false, lastSeg: -1, pools: [], segs: [], timer: null, timeLeft: 0, drag: null, raf: 0, last: 0, size: 300, locked: false, catIdx: -1, curQ: null };
+
+  function startGame(cfg) {
+    G.cfg = cfg;
+    Object.assign(G, { running: true, score: 0, correct: 0, wrong: 0, missed: [], t0: performance.now(), lives: cfg.lives || Infinity, asked: 0, angle: -Math.PI / 2 / 2, omega: 0, spinning: false, lastSeg: -1, locked: false, curQ: null });
+    G.segs = cfg.cats.map((c, i) => ({ name: c.name, color: PALETTE[i % PALETTE.length] }));
+    G.pools = cfg.cats.map(c => shuffle(c.qs.map((_, j) => j)));
+    G.total = cfg.cats.reduce((a, c) => a + c.qs.length, 0);
+    document.body.classList.add('playing');
+    const p = Egido.player; $('#hudPlayer').textContent = '👤 ' + p.name + (p.cls ? ' · ' + p.cls : '');
+    $('#hudTime').classList.add('hidden'); $('#hudLives').classList.toggle('hidden', !cfg.lives);
+    $('#qpanel').classList.add('hidden'); $('#spinHint').textContent = t('cark.spinHint');
+    updateHud(); fit(); draw();
+    Egido.countdown(3, () => { G.last = performance.now(); G.raf = requestAnimationFrame(loop); }, () => G.running);
+  }
+  function updateHud() {
+    $('#hudScore').textContent = '⭐ ' + G.score;
+    $('#hudProg').textContent = `❓ ${G.asked}/${G.total}`;
+    if (G.cfg.lives) $('#hudLives').textContent = '❤'.repeat(Math.max(0, G.lives)) + '🖤'.repeat(Math.max(0, G.cfg.lives - G.lives));
+  }
+  function fit() {
+    const w = $('#wheelWrap').clientWidth, h = $('#wheelWrap').clientHeight;
+    const size = Math.max(220, Math.min(w * .94, (h - 60 - 120)));
+    if (Math.abs(size - G.size) > 1 || canvas.width !== Math.round(size * DPR())) {
+      G.size = size; canvas.style.width = canvas.style.height = size + 'px';
+      canvas.width = canvas.height = Math.round(size * DPR()); ctx.setTransform(DPR(), 0, 0, DPR(), 0, 0);
+    }
+  }
+  const DPR = () => Math.min(window.devicePixelRatio || 1, 2);
+  window.addEventListener('resize', () => { if (G.running) { fit(); draw(); } });
+
+  // ---------- Döngü / fizik ----------
+  function loop(now) {
+    if (!G.running) return;
+    const dt = Math.min(.05, (now - G.last) / 1000); G.last = now;
+    fit();
+    if (G.spinning) {
+      G.angle += G.omega * dt;
+      G.omega *= Math.pow(.42, dt);          // sürtünme
+      G.omega -= Math.sign(G.omega) * .35 * dt;
+      const seg = segAtPointer();
+      if (seg !== G.lastSeg) { G.lastSeg = seg; tone(1500 + Math.min(600, Math.abs(G.omega) * 60), .03, 'square', .05); }
+      if (Math.abs(G.omega) < .25) { G.omega = 0; G.spinning = false; canvas.classList.remove('spinning'); onStop(seg); }
+    }
+    draw();
+    G.raf = requestAnimationFrame(loop);
+  }
+  const segAngle = () => Math.PI * 2 / G.segs.length;
+  function segAtPointer() { // üstteki ok (-90°) hangi dilimde
+    const a = ((-Math.PI / 2 - G.angle) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+    return Math.floor(a / segAngle());
+  }
+  function spin(force) {
+    if (!G.running || G.spinning || G.locked) return;
+    G.omega = (force || (9 + Math.random() * 7)) * (Math.random() < .5 ? 1 : 1); G.spinning = true; G.lastSeg = -1;
+    canvas.classList.add('spinning'); $('#spinHint').textContent = '';
+    sfx.click();
+  }
+  $('#btnSpin').onclick = () => spin();
+  // sürükleyerek çevirme
+  const ang = (e) => { const r = canvas.getBoundingClientRect(); return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)); };
+  canvas.addEventListener('pointerdown', e => { if (!G.running || G.spinning || G.locked) return; G.drag = { a: ang(e), t: performance.now(), v: 0 }; canvas.setPointerCapture(e.pointerId); });
+  canvas.addEventListener('pointermove', e => {
+    if (!G.drag) return;
+    const a = ang(e), now = performance.now(); let d = a - G.drag.a; if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2;
+    G.angle += d; const dt = Math.max(1, now - G.drag.t) / 1000; G.drag.v = G.drag.v * .5 + (d / dt) * .5; G.drag.a = a; G.drag.t = now;
+    const seg = segAtPointer(); if (seg !== G.lastSeg) { G.lastSeg = seg; tone(900, .02, 'square', .04); }
+  });
+  const endDrag = () => { if (!G.drag) return; const v = G.drag.v; G.drag = null; if (Math.abs(v) > 2) spin(Math.max(6, Math.min(22, Math.abs(v))) * Math.sign(v)); };
+  canvas.addEventListener('pointerup', endDrag); canvas.addEventListener('pointercancel', endDrag);
+
+  function onStop(seg) {
+    G.catIdx = seg;
+    if (!G.pools[seg].length) { // kategori bitti: tekrar çevir
+      $('#spinHint').textContent = t('cark.exhausted', { c: G.segs[seg].name }); tone(300, .2, 'sine', .15);
+      setTimeout(() => { if (G.running) spin(); }, 1100); return;
+    }
+    tone(880, .15, 'triangle', .2); tone(1320, .25, 'triangle', .2, .12);
+    setTimeout(askQuestion, 500);
+  }
+
+  // ---------- Soru ----------
+  function askQuestion() {
+    if (!G.running) return;
+    const ci = G.catIdx, qi = G.pools[ci].pop(), q = G.cfg.cats[ci].qs[qi];
+    G.curQ = q; G.locked = true;
+    $('#qcat').textContent = G.segs[ci].name; $('#qcat').style.background = G.segs[ci].color;
+    $('#qtext').textContent = q.q; $('#qfb').textContent = ''; $('#qfb').className = 'qfb';
+    const opts = shuffle([q.a, ...q.w]);
+    $('#choices').innerHTML = opts.map(o => `<button class="choice" data-w="${escapeHtml(o)}">${escapeHtml(o)}</button>`).join('');
+    $('#choices').querySelectorAll('.choice').forEach(b => b.onclick = () => answer(b.dataset.w === q.a, b));
+    $('#qpanel').classList.remove('hidden');
+    startTimer();
+  }
+  function answer(ok, btn, timeout) {
+    stopTimer();
+    const q = G.curQ;
+    $('#choices').querySelectorAll('.choice').forEach(x => { x.disabled = true; if (x.dataset.w === q.a) x.classList.add('ok'); });
+    if (btn && !ok) btn.classList.add('bad');
+    G.asked++;
+    if (ok) {
+      const bonus = G.cfg.time ? Math.round(Math.max(0, G.timeLeft) / G.cfg.time * 5) : 0;
+      G.score += 10 + bonus; G.correct++;
+      $('#qfb').textContent = t('puzzle.right', { p: 10 + bonus }); $('#qfb').classList.add('ok'); sfx.good();
+    } else {
+      G.wrong++; G.missed.push(q.q); if (G.cfg.lives) G.lives--;
+      $('#qfb').innerHTML = t(timeout ? 'puzzle.timeIs' : 'puzzle.wrongIs', { w: escapeHtml(q.a) }); $('#qfb').classList.add('bad'); sfx.bad();
+    }
+    updateHud();
+    setTimeout(() => {
+      if (!G.running) return;
+      $('#qpanel').classList.add('hidden'); G.locked = false;
+      if (G.cfg.lives && G.lives <= 0) return endGame('lose');
+      if (G.asked >= G.total) return endGame(G.wrong === 0 ? 'win' : 'done');
+      $('#spinHint').textContent = t('cark.spinHint');
+    }, ok ? 1300 : 2400);
+  }
+  function startTimer() {
+    stopTimer(); if (!G.cfg.time) return;
+    $('#hudTime').classList.remove('hidden');
+    G.timeLeft = G.cfg.time; $('#hudTime').textContent = '⏱ ' + G.timeLeft; $('#hudTime').style.color = '';
+    let last = performance.now();
+    G.timer = setInterval(() => {
+      const now = performance.now(); G.timeLeft -= (now - last) / 1000; last = now;
+      const s = Math.max(0, Math.ceil(G.timeLeft)); $('#hudTime').textContent = '⏱ ' + s; $('#hudTime').style.color = s <= 5 ? '#ffd1cc' : '';
+      if (G.timeLeft <= 0) { stopTimer(); answer(false, null, true); }
+    }, 100);
+  }
+  function stopTimer() { if (G.timer) { clearInterval(G.timer); G.timer = null; } $('#hudTime').classList.add('hidden'); }
+
+  // ---------- Çizim ----------
+  function draw() {
+    const s = G.size, c = s / 2, R = c - 14;
+    ctx.clearRect(0, 0, s, s);
+    const n = G.segs.length, sa = segAngle();
+    for (let i = 0; i < n; i++) {
+      const a0 = G.angle + i * sa, a1 = a0 + sa, done = !G.pools[i] || !G.pools[i].length;
+      ctx.beginPath(); ctx.moveTo(c, c); ctx.arc(c, c, R, a0, a1); ctx.closePath();
+      ctx.fillStyle = done ? '#9aa3ad' : G.segs[i].color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 3; ctx.stroke();
+      // kategori adı: dilim boyunca
+      ctx.save(); ctx.translate(c, c); ctx.rotate(a0 + sa / 2); ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = done ? '#e9ecef' : '#1b2631'; let fs = Math.max(12, Math.min(26, s / 16)); ctx.font = `800 ${fs}px "Segoe UI", system-ui, sans-serif`;
+      const maxW = R * .62; while (ctx.measureText(G.segs[i].name).width > maxW && fs > 10) { fs--; ctx.font = `800 ${fs}px "Segoe UI", system-ui, sans-serif`; }
+      ctx.shadowColor = 'rgba(255,255,255,.6)'; ctx.shadowBlur = 2; ctx.fillText(G.segs[i].name, R - 16, 0); ctx.restore();
+    }
+    // dış halka + ışıklar
+    ctx.beginPath(); ctx.arc(c, c, R + 6, 0, Math.PI * 2); ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 12; ctx.stroke();
+    const dots = n * 3; for (let i = 0; i < dots; i++) { const a = i * Math.PI * 2 / dots + G.angle; ctx.beginPath(); ctx.arc(c + Math.cos(a) * (R + 6), c + Math.sin(a) * (R + 6), 3, 0, Math.PI * 2); ctx.fillStyle = (i + Math.floor(performance.now() / 250)) % 2 ? '#ffe066' : '#fff'; ctx.fill(); }
+    // göbek
+    const g = ctx.createRadialGradient(c - 6, c - 6, 4, c, c, s * .09); g.addColorStop(0, '#fff'); g.addColorStop(1, '#c9cfd8');
+    ctx.beginPath(); ctx.arc(c, c, s * .09, 0, Math.PI * 2); ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 4; ctx.stroke();
+    // ok (üstte)
+    const wob = G.spinning ? Math.sin(performance.now() / 40) * 3 * Math.min(1, Math.abs(G.omega) / 10) : 0;
+    ctx.save(); ctx.translate(c, 8); ctx.rotate(wob * Math.PI / 180);
+    ctx.beginPath(); ctx.moveTo(-18, -6); ctx.lineTo(18, -6); ctx.lineTo(0, 34); ctx.closePath();
+    ctx.fillStyle = '#e74c3c'; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke(); ctx.restore();
+  }
+
+  $('#btnQuit').onclick = async () => { if (G.running && await EgidoUI.confirm(t('puzzle.quitConfirm'))) endGame('quit'); };
+
+  function endGame(kind) {
+    G.running = false; stopTimer(); cancelAnimationFrame(G.raf);
+    document.body.classList.remove('playing'); $('#qpanel').classList.add('hidden');
+    const time = (performance.now() - G.t0) / 1000;
+    const r = { kind: kind === 'done' ? 'lose' : kind, score: G.score, correct: G.correct, total: G.total, wrong: G.wrong, time, missed: G.missed, missedTitle: t('cark.missed') };
+    if (kind === 'quit') { r.emoji = '🚪'; }
+    else if (kind === 'win') { r.emoji = '🎡'; r.title = t('puzzle.perfect'); r.msg = t('cark.perfectMsg'); sfx.win(); }
+    else if (kind === 'lose') { r.emoji = '💔'; r.title = t('balon.lost'); r.msg = t('cark.overMsg', { t: G.total, c: G.correct }); sfx.lose(); }
+    else { r.emoji = G.correct >= G.total / 2 ? '🎉' : '💪'; r.title = t('res.over'); r.msg = t('cark.overMsg', { t: G.total, c: G.correct }); (G.correct >= G.total / 2 ? sfx.win : sfx.lose)(); }
+    Egido.finish(r);
+  }
+
+  renderCats();
+  Egido.init({
+    gameId: 'cark', emoji: '🎡',
+    introRules: () => t('cark.rules'),
+    readConfig, writeConfig, validate,
+    summary: c => t('cark.summary', { n: (c.cats || []).length, q: (c.cats || []).reduce((a, x) => a + (x.qs || []).length, 0) }),
+    startGame,
+  });
+})();
+</script>
+</body>
+</html>
