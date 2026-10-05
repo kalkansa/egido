@@ -68,16 +68,16 @@ window.ImagePicker = (() => {
   function open(opts) { inject(); onPick = opts.onPick; $('#ipOverlay').classList.remove('hidden'); if (!KEY) { status(t('pick.noKey')); $('#ipGrid').innerHTML = ''; } setTimeout(() => $('#ipQ').focus(), 50); }
   function close() { const el = $('#ipOverlay'); if (el) el.classList.add('hidden'); }
 
-  // Resmi en fazla 420 px'e küçültüp JPEG base64 yap (ayarların içinde taşınır)
+  // Resmi en fazla 320 px'e küçültüp JPEG base64 yap (ayarların içinde taşınır)
   function fileToData(src, revoke) {
     return new Promise((res, rej) => {
       const im = new Image(); if (!revoke) im.crossOrigin = 'anonymous';
       im.onload = () => {
         try {
-          const MAX = 420, sc = Math.min(1, MAX / Math.max(im.width, im.height));
+          const MAX = 320, sc = Math.min(1, MAX / Math.max(im.width, im.height));
           const c = document.createElement('canvas'); c.width = Math.round(im.width * sc); c.height = Math.round(im.height * sc);
           const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(im, 0, 0, c.width, c.height);
-          res(c.toDataURL('image/jpeg', .82));
+          res(c.toDataURL('image/jpeg', .76));
         } catch (e) { rej(e); } finally { if (revoke) URL.revokeObjectURL(src); }
       };
       im.onerror = () => { if (revoke) URL.revokeObjectURL(src); rej(new Error('load')); };
