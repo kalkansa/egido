@@ -39,6 +39,7 @@ window.Egido = (() => {
   let currentSid = '';          // skor tablosu oturumu (config.sid)
   let currentSetId = null;      // kayıtlı oyunun id'si (öğretmen)
   let currentCode = '';         // kayıtlı oyunun kodu
+  let playSetId = null;         // oynanan kayıtlı oyunun id'si (skora yazılır, son oynanma güncellenir)
   let isTeacher = true;
   let cfg = null;               // oynanan ayarlar
   let player = { name: '', cls: '' };
@@ -175,7 +176,9 @@ window.Egido = (() => {
     },
     async add(c, e) {
       const row = { game: o.gameId, set_key: setKey(c), name: e.name, cls: e.cls, score: e.score, correct: e.correct, total: e.total, wrong: e.wrong, time_sec: Math.round(e.time * 10) / 10, result: e.result };
-      const { error } = await sb.from('scores').insert(row);
+      if (playSetId) row.set_id = playSetId; // kayıtlı oyunun son oynanma zamanı tetikleyiciyle güncellenir
+      let { error } = await sb.from('scores').insert(row);
+      if (error && row.set_id && error.code === '42703') { delete row.set_id; ({ error } = await sb.from('scores').insert(row)); } // şema henüz güncellenmediyse
       if (error) throw error;
       return this.list(c);
     },
@@ -304,7 +307,7 @@ window.Egido = (() => {
     if (!player.name) $('#pName').focus();
     try { fillClassOptions(await Store.list(c)); } catch (e) {}
   }
-  function launch(c) { cfg = c; show('game'); o.startGame(c); }
+  function launch(c) { cfg = c; if (!playSetId && currentSetId) playSetId = currentSetId; show('game'); o.startGame(c); }
 
   // ---------- Bitiş ----------
   function finish(r) {
@@ -471,6 +474,7 @@ window.Egido = (() => {
       try {
         const row = await joinByCode(joinCode);
         if (!row || !safeWrite(row.config)) { $('#introQ').textContent = t('intro.notFound'); $('#introErr').textContent = t('intro.notFoundHint'); return; }
+        playSetId = row.id || null;
         applyCfgLang(row.config);
         gotoIntro(readConfig());
       } catch (e) { $('#introQ').textContent = t('intro.loadFail'); $('#introErr').textContent = t('intro.loadFailHint'); }

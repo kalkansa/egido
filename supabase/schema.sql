@@ -31,16 +31,20 @@ create policy "sahibi ekler"     on public.sets for insert to authenticated with
 create policy "sahibi günceller" on public.sets for update to authenticated using (owner = auth.uid()) with check (owner = auth.uid());
 create policy "sahibi siler"     on public.sets for delete to authenticated using (owner = auth.uid());
 
+-- Son oynanma zamanı: öğretmen panelinde görünür, uzun süre oynanmayanları temizlemek için
+alter table public.sets add column if not exists last_played_at timestamptz;
+
 -- Öğrenci giriş yapmadan kodla oyuna katılır: yalnızca o kodun oyununu döndüren fonksiyon.
 -- security definer olduğu için RLS'yi aşar ama sadece kod eşleşen tek satırı verir; liste alınamaz.
+drop function if exists public.join_set(text);
 create or replace function public.join_set(p_code text)
-returns table (game text, config jsonb)
+returns table (id uuid, game text, config jsonb)
 language sql
 security definer
 stable
 set search_path = public
 as $$
-  select s.game, s.config from public.sets s where s.code = upper(trim(p_code)) limit 1;
+  select s.id, s.game, s.config from public.sets s where s.code = upper(trim(p_code)) limit 1;
 $$;
 revoke all on function public.join_set(text) from public;
 grant execute on function public.join_set(text) to anon, authenticated;
@@ -62,8 +66,27 @@ create table if not exists public.scores (
   result      text        not null check (result in ('win', 'lose', 'timeout')),
   created_at  timestamptz not null default now()
 );
+alter table public.scores add column if not exists set_id uuid references public.sets (id) on delete set null; -- hangi kayıtlı oyun
 create index if not exists scores_set_key_idx on public.scores (set_key, score desc);
 create index if not exists scores_created_idx on public.scores (created_at);
+
+-- Skor eklenince kayıtlı oyunun son oynanma zamanını güncelle (anon'un sets'e yazma yetkisi yok, tetikleyici definer olarak yazar)
+create or replace function public.touch_set_played()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.set_id is not null then
+    update public.sets set last_played_at = now() where id = new.set_id;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists scores_touch_set on public.scores;
+create trigger scores_touch_set after insert on public.scores
+  for each row execute function public.touch_set_played();
 
 alter table public.scores enable row level security;
 
@@ -81,5 +104,8 @@ create policy "skor oku"  on public.scores for select to anon, authenticated usi
 -- Öğretmen hesapları: Authentication → Providers → Email açık olmalı.
 -- Kayıt sonrası e-posta onayı istemiyorsanız aynı sayfada "Confirm email" seçeneğini kapatın.
 --
--- Eski skorları temizlemek için (ders bitince önemi kalmıyor):
---   delete from public.scores where created_at < now() - interval '90 days';
+-- Temizlik (ders bitince verinin önemi kalmıyor). SQL Editor'da çalıştırın:
+--   90 gündür oynanmayan (ya da hiç oynanmamış ve 90 günden eski) kayıtlı oyunları sil:
+--     delete from public.sets where coalesce(last_played_at, created_at) < now() - interval '90 days';
+--   Eski skorları sil:
+--     delete from public.scores where created_at < now() - interval '90 days';

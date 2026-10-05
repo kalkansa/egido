@@ -79,6 +79,18 @@ Depo **public** olmalı (ücretsiz planda Pages yalnızca public depolarda çal�
 - `shared/config.js` boşsa (yerel mod) skorlar yalnızca o tarayıcıda tutulur, kod üretilemez, ayarlar
   uzun bağlantının içinde taşınır.
 
+## Temizlik
+
+Öğretmen panelinde her oyunun **Son oynanma** tarihi görünür; 60 günden eskiler uyarı rengiyle işaretlenir.
+Toplu temizlik için Supabase SQL Editor'da:
+
+```sql
+-- 90 gündür oynanmayan (ya da hiç oynanmamış ve 90 günden eski) oyunları sil
+delete from public.sets where coalesce(last_played_at, created_at) < now() - interval '90 days';
+-- Eski skorları sil
+delete from public.scores where created_at < now() - interval '90 days';
+```
+
 ## Yeni oyun ekleme
 
 1. `games/<yeni>/index.html` oluşturun; `games/puzzle/index.html` iyi bir şablondur.

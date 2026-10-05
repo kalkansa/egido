@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Egido</title>
 <link rel="icon" type="image/svg+xml" href="shared/logo.svg">
-<link rel="stylesheet" href="shared/egido.css?v=202610051027">
+<link rel="stylesheet" href="shared/egido.css?v=202610051030">
 <style>
   body { overflow: auto; user-select: text; display: flex; flex-direction: column; align-items: center; padding: 36px 16px; min-height: 100vh; color: #fff; }
   h1 { font-size: clamp(28px, 5vw, 44px); margin: 0 0 6px; text-shadow: 0 3px 10px rgba(0,0,0,.3); }
@@ -86,9 +86,9 @@
 
   <footer data-i18n="home.footer"></footer>
 
-<script src="shared/config.js?v=202610051027"></script>
+<script src="shared/config.js?v=202610051030"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="shared/i18n.js?v=202610051027"></script>
+<script src="shared/i18n.js?v=202610051030"></script>
 <script>
 (() => {
   const $ = s => document.querySelector(s);
@@ -152,6 +152,13 @@
   $('#logout').onclick = async e => { e.preventDefault(); await sb.auth.signOut(); render(); };
 
   // ---------- Öğretmen paneli ----------
+  // Son oynanma: hiç oynanmamışsa "Hiç", 60 günden eskiyse uyarı rengi
+  function playedCell(r) {
+    if (!r.last_played_at) return `<span style="color:var(--muted)">${t('home.never')}</span>`;
+    const d = Math.floor((Date.now() - Date.parse(r.last_played_at)) / 86400000);
+    const txt = d <= 0 ? t('home.today') : t('home.daysAgo', { d });
+    return d > 60 ? `<span style="color:var(--bad)" title="${t('home.stale')}">⚠ ${txt}</span>` : txt;
+  }
   async function render() {
     const session = remote ? (await sb.auth.getSession()).data.session : null;
     $('#guest').classList.toggle('hidden', !!session || !!$('#joining')); // kodla yönlendirme sürerken formlar gizli kalır
@@ -160,15 +167,17 @@
     $('#who').textContent = session.user.email.replace('@' + USER_DOMAIN, '');
     $('#newgames').innerHTML = GAMES.map(g => `<a class="gcard" href="games/${g.id}/"><span class="emoji">${g.emoji}</span><span><b>+ ${esc(gname(g))}</b><small>${esc(t('game.' + g.id + '.desc'))}</small></span></a>`).join('');
     $('#list').innerHTML = `<div class="empty">${t('loading')}</div>`;
-    const { data, error } = await sb.from('sets').select('id,code,game,title,updated_at').order('updated_at', { ascending: false });
+    let { data, error } = await sb.from('sets').select('id,code,game,title,updated_at,last_played_at').order('updated_at', { ascending: false });
+    if (error && error.code === '42703') ({ data, error } = await sb.from('sets').select('id,code,game,title,updated_at').order('updated_at', { ascending: false })); // şema henüz güncellenmediyse
     if (error) { $('#list').innerHTML = `<div class="empty">${t('home.listFail', { e: esc(error.message) })}</div>`; return; }
     if (!data.length) { $('#list').innerHTML = `<div class="empty">${t('home.noGames')}</div>`; return; }
-    $('#list').innerHTML = `<table class="games"><thead><tr><th>${t('home.colGame')}</th><th>${t('home.colTitle')}</th><th>${t('home.colCode')}</th><th>${t('home.colDate')}</th><th></th></tr></thead><tbody>` +
+    $('#list').innerHTML = `<table class="games"><thead><tr><th>${t('home.colGame')}</th><th>${t('home.colTitle')}</th><th>${t('home.colCode')}</th><th>${t('home.colDate')}</th><th>${t('home.colPlayed')}</th><th></th></tr></thead><tbody>` +
       data.map(r => { const g = gameOf(r.game); return `<tr>
         <td>${g.emoji} ${esc(gname(g))}</td>
         <td>${esc(r.title || t('home.untitled'))}</td>
         <td class="code">${esc(r.code)}</td>
         <td>${new Date(r.updated_at).toLocaleDateString(I18N.lang)}</td>
+        <td>${playedCell(r)}</td>
         <td class="acts">
           <a class="btn small" href="games/${esc(r.game)}/?id=${r.id}&share=1">${t('home.showCode')}</a>
           <a class="btn small secondary" href="games/${esc(r.game)}/?id=${r.id}">${t('home.edit')}</a>
