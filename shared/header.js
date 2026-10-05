@@ -5,7 +5,7 @@ window.EgidoHeader = (() => {
   'use strict';
   const t = (k, v) => (window.I18N ? I18N.t(k, v) : k);
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const GAMES = [{ id: 'balon', emoji: '🎈' }, { id: 'gol', emoji: '⚽' }, { id: 'puzzle', emoji: '🧩' }, { id: 'kablo', emoji: '🔌' }];
+  const GAMES = [{ id: 'balon', emoji: '🎈' }, { id: 'gol', emoji: '⚽' }, { id: 'puzzle', emoji: '🧩' }, { id: 'kablo', emoji: '🔌' }, { id: 'cumle', emoji: '📝' }];
   const gname = id => { const k = 'game.' + id + '.name'; const n = t(k); return n === k ? id : n; };
   let state = null;
 

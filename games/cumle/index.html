@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Egido</title>
+<link rel="icon" type="image/svg+xml" href="../../shared/logo.svg">
+<link rel="stylesheet" href="../../shared/egido.css?v=202610051127">
+<style>
+  /* ---------- Öğretmen: cümle listesi ---------- */
+  .items { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+  .item { display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; background: #f1f5fb; border-radius: 12px; padding: 8px 10px; }
+  .item .no { font-weight: 800; color: var(--muted); text-align: center; }
+  .item input { margin: 0; font-size: 16px; }
+  .item .rm { background: none; border: 0; color: var(--bad); font-size: 20px; cursor: pointer; padding: 6px 8px; }
+  .addrow { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+
+  /* ---------- Oyun: okul fişi ---------- */
+  body.playing { background: linear-gradient(180deg, #2b5876 0%, #4e8caa 100%); }
+  .sc { position: absolute; inset: 0; padding: 64px 3vw 16px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 18px; }
+  /* fiş: çizgili kâğıt şeridi */
+  .strip { width: min(96vw, 1000px); min-height: calc(var(--wz) * 1.9); background: repeating-linear-gradient(180deg, #fffdf5 0, #fffdf5 calc(var(--wz) * 1.9 - 2px), #9ec5e8 calc(var(--wz) * 1.9 - 2px), #9ec5e8 calc(var(--wz) * 1.9));
+    border-radius: 10px; box-shadow: 0 15px 40px rgba(0,0,0,.35); position: relative; padding: 10px 14px 10px 46px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .strip::before { content: ''; position: absolute; left: 32px; top: 0; bottom: 0; width: 2px; background: #e74c3c; opacity: .7; } /* kenar çizgisi */
+  .strip.shake { animation: shake .35s; }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-10px); } 40% { transform: translateX(10px); } 60% { transform: translateX(-6px); } 80% { transform: translateX(6px); } }
+  .strip .ph { color: #b9c5d3; font-size: calc(var(--wz) * .5); font-style: italic; }
+  .word { display: inline-flex; align-items: center; justify-content: center; height: calc(var(--wz) * 1.25); padding: 0 calc(var(--wz) * .45); border-radius: 10px;
+    font-family: "Segoe Print", "Comic Sans MS", "Segoe UI", sans-serif; font-size: var(--wz); font-weight: 700; color: #1b2a41; cursor: pointer; user-select: none; white-space: nowrap;
+    transition: transform .12s, opacity .15s, background .2s; }
+  .strip .word { background: #fff; border: 2px solid #9ec5e8; }
+  .strip .word.locked { background: #ffe9c2; border-color: #ffbf69; cursor: default; }
+  .strip.ok .word { background: #bff3cf; border-color: var(--ok); }
+  .strip.bad .word { background: #ffd0cb; border-color: var(--bad); }
+  .pool { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: 96vw; min-height: calc(var(--wz) * 1.4); }
+  .pool .word { background: linear-gradient(180deg, #fff6d6, #ffe08a); border: 2px solid #e0b43b; box-shadow: 0 4px 0 #c99a1e, 0 8px 16px rgba(0,0,0,.25); transform: rotate(var(--rot)); }
+  .pool .word:active { transform: rotate(var(--rot)) translateY(3px); box-shadow: 0 1px 0 #c99a1e; }
+  .pool .word.used { opacity: 0; pointer-events: none; transform: scale(.6); }
+  .sc-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .sc-fb { min-height: 36px; color: #fff; font-size: 22px; font-weight: 800; text-shadow: 0 2px 6px rgba(0,0,0,.4); text-align: center; max-width: 94vw; }
+  .sc-fb b { color: #bff3cf; }
+  .sc-fb.bad b { color: #ffd0cb; }
+</style>
+</head>
+<body>
+
+<!-- ===================== ÖĞRETMEN KURULUM ===================== -->
+<div id="setup" class="screen">
+  <div class="card">
+    <div id="teacherBarHost"></div>
+    <h1 data-i18n="cumle.title"></h1>
+    <p class="sub" data-i18n="cumle.sub"></p>
+
+    <label data-i18n="cumle.items"></label>
+    <div class="items" id="items"></div>
+    <div class="addrow">
+      <button class="btn secondary" id="btnAdd" data-i18n="cumle.add"></button>
+      <button class="btn secondary" id="btnExample" data-i18n="setup.example"></button>
+    </div>
+
+    <div class="cols three">
+      <div>
+        <label for="order" data-i18n="puzzle.order"></label>
+        <select id="order"><option value="random" selected data-i18n="puzzle.random"></option><option value="fixed" data-i18n="puzzle.fixed"></option></select>
+      </div>
+      <div>
+        <label for="time" data-i18n="puzzle.time"></label>
+        <select id="time"><option value="0" data-i18n="puzzle.noTime"></option><option value="20">20 s</option><option value="30">30 s</option><option value="45" selected>45 s</option><option value="60">60 s</option></select>
+      </div>
+      <div>
+        <label for="hint" data-i18n="puzzle.hint"></label>
+        <select id="hint"><option value="0" selected data-i18n="puzzle.none"></option><option value="1" data-i18n="cumle.firstWord"></option></select>
+      </div>
+    </div>
+    <p class="hint" data-i18n="cumle.help"></p>
+
+    <div class="err" id="setupErr"></div>
+    <div class="row">
+      <button class="btn" id="btnStart" data-i18n="setup.try"></button>
+      <button class="btn" id="btnShare" data-i18n="setup.code"></button>
+      <button class="btn secondary" id="btnLbSetup" data-i18n="setup.lb"></button>
+    </div>
+    <div id="sharePanelHost"></div>
+  </div>
+</div>
+
+<!-- ===================== OYUN ===================== -->
+<div id="game" class="screen hidden">
+  <div class="hud">
+    <div class="pill" id="hudPlayer">👤</div>
+    <div class="pill progress" id="hudScore">⭐ 0</div>
+    <div class="q"></div>
+    <div class="pill progress" id="hudProg">1/1</div>
+    <div class="pill progress" id="hudTime">⏱ 45</div>
+    <div class="pill pauseBtn" id="btnQuit">✕</div>
+  </div>
+  <div class="sc" id="sc">
+    <div class="strip" id="strip"></div>
+    <div class="pool" id="pool"></div>
+    <div class="sc-actions">
+      <button class="btn secondary" id="btnUndo" data-i18n="puzzle.undo"></button>
+      <button class="btn secondary" id="btnShuffle" data-i18n="puzzle.shuffle"></button>
+      <button class="btn ok big" id="btnOk" data-i18n="puzzle.ok"></button>
+    </div>
+    <div class="sc-fb" id="fb"></div>
+  </div>
+  <div id="countdown" class="hidden"></div>
+</div>
+
+<script src="../../shared/config.js?v=202610051127"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="../../shared/i18n.js?v=202610051127"></script>
+<script src="../../shared/ui.js?v=202610051127"></script>
+<script src="../../shared/header.js?v=202610051127"></script>
+<script src="../../shared/egido.js?v=202610051127"></script>
+<script>
+(() => {
+  'use strict';
+  const $ = s => document.querySelector(s);
+  const t = I18N.t;
+  const { sfx, escapeHtml, shuffle } = Egido;
+  const norm = s => s.trim().replace(/\s+/g, ' ');
+  const words = s => norm(s).split(' ');
+
+  // ---------- Öğretmen: cümle listesi ----------
+  let items = []; // ['Ali topu at.', ...]
+  function renderItems() {
+    const box = $('#items');
+    box.innerHTML = items.map((s, i) => `
+      <div class="item" data-i="${i}">
+        <div class="no">${i + 1}</div>
+        <input type="text" class="sent" placeholder="${t('cumle.sentencePh')}" maxlength="140" value="${escapeHtml(s)}">
+        <button class="rm" title="${t('puzzle.remove')}">✕</button>
+      </div>`).join('') || `<div class="hint">${t('cumle.noItems')}</div>`;
+    box.querySelectorAll('.item').forEach(row => {
+      const i = +row.dataset.i;
+      row.querySelector('.sent').oninput = e => { items[i] = e.target.value; };
+      row.querySelector('.sent').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); $('#btnAdd').click(); } };
+      row.querySelector('.rm').onclick = () => { items.splice(i, 1); renderItems(); };
+    });
+  }
+  document.addEventListener('egido:lang', renderItems);
+  $('#btnAdd').onclick = () => { items.push(''); renderItems(); const rows = document.querySelectorAll('.item .sent'); if (rows.length) rows[rows.length - 1].focus(); };
+  $('#btnExample').onclick = () => writeConfig({ items: t('cumle.ex').split('|'), order: 'random', time: 45, hint: 0 });
+
+  function readConfig() {
+    return { items: items.map(norm).filter(Boolean), order: $('#order').value, time: +$('#time').value, hint: +$('#hint').value };
+  }
+  function writeConfig(c) {
+    items = (c.items || []).slice();
+    $('#order').value = c.order || 'random'; $('#time').value = c.time != null ? c.time : 45; $('#hint').value = c.hint != null ? c.hint : 0;
+    renderItems();
+  }
+  function validate(c) {
+    if (!Array.isArray(c.items) || !c.items.length) return t('cumle.errEmpty');
+    for (const s of c.items) {
+      const n = words(s).length;
+      if (n < 2) return t('cumle.errShort', { s });
+      if (n > 14) return t('cumle.errLong', { s });
+    }
+    return '';
+  }
+
+  // ---------- Oyun ----------
+  const G = { cfg: null, running: false, order: [], idx: 0, score: 0, correct: 0, wrong: 0, missed: [], t0: 0, placed: [], tiles: [], locked: false, timer: null, timeLeft: 0 };
+  const cur = () => G.cfg.items[G.order[G.idx]];
+
+  function startGame(cfg) {
+    G.cfg = cfg;
+    Object.assign(G, { running: true, idx: 0, score: 0, correct: 0, wrong: 0, missed: [], t0: performance.now(), locked: false });
+    G.order = cfg.items.map((_, i) => i); if (cfg.order === 'random') G.order = shuffle(G.order);
+    document.body.classList.add('playing');
+    const p = Egido.player; $('#hudPlayer').textContent = '👤 ' + p.name + (p.cls ? ' · ' + p.cls : '');
+    $('#hudTime').classList.toggle('hidden', !cfg.time);
+    $('#sc').style.visibility = 'hidden';
+    Egido.countdown(3, () => { $('#sc').style.visibility = ''; showQuestion(); }, () => G.running);
+  }
+
+  function showQuestion() {
+    if (!G.running) return;
+    const ws = words(cur());
+    $('#hudScore').textContent = '⭐ ' + G.score;
+    $('#hudProg').textContent = `${G.idx + 1}/${G.order.length}`;
+    $('#fb').textContent = ''; $('#fb').classList.remove('bad');
+    $('#strip').classList.remove('ok', 'bad');
+    // kelime boyutu: cümle uzunluğuna göre
+    const totalChars = ws.join(' ').length;
+    const wz = Math.max(16, Math.min(30, Math.floor((Math.min(window.innerWidth, 1000) * 1.5) / Math.max(totalChars, 14))));
+    document.documentElement.style.setProperty('--wz', wz + 'px');
+
+    let order = shuffle(ws.map((_, i) => i));
+    for (let k = 0; k < 6 && order.every((v, i) => v === i); k++) order = shuffle(order); // yerli yerinde kalmasın
+    G.tiles = order.map(i => ({ id: i, w: ws[i], used: false, rot: (Math.random() * 6 - 3).toFixed(1) + 'deg' }));
+    G.placed = []; // sıralı tile id'leri
+    if (G.cfg.hint) { const first = G.tiles.find(x => x.id === 0); first.used = true; first.locked = true; G.placed.push(0); }
+    G.locked = false;
+    renderBoard();
+    startTimer();
+  }
+  function tileById(id) { return G.tiles.find(x => x.id === id); }
+  function renderBoard() {
+    $('#strip').innerHTML = G.placed.length
+      ? G.placed.map((id, k) => `<div class="word ${tileById(id).locked ? 'locked' : ''}" data-k="${k}">${escapeHtml(tileById(id).w)}</div>`).join('')
+      : `<span class="ph">${t('cumle.stripPh')}</span>`;
+    $('#pool').innerHTML = G.tiles.map(tl => `<div class="word ${tl.used ? 'used' : ''}" data-id="${tl.id}" style="--rot:${tl.rot}">${escapeHtml(tl.w)}</div>`).join('');
+    $('#strip').querySelectorAll('.word:not(.locked)').forEach(el => el.onclick = () => unplace(+el.dataset.k));
+    $('#pool').querySelectorAll('.word:not(.used)').forEach(el => el.onclick = () => place(+el.dataset.id));
+  }
+  function place(id) { if (G.locked) return; const tl = tileById(id); if (tl.used) return; tl.used = true; G.placed.push(id); sfx.click(); renderBoard(); }
+  function unplace(k) { if (G.locked) return; const id = G.placed[k]; if (tileById(id).locked) return; G.placed.splice(k, 1); tileById(id).used = false; renderBoard(); }
+  $('#btnUndo').onclick = () => { for (let k = G.placed.length - 1; k >= 0; k--) if (!tileById(G.placed[k]).locked) { unplace(k); return; } };
+  $('#btnShuffle').onclick = () => { if (G.locked) return; const free = shuffle(G.tiles.filter(x => !x.used)); let k = 0; G.tiles = G.tiles.map(x => x.used ? x : free[k++]); G.tiles.forEach(x => x.rot = (Math.random() * 6 - 3).toFixed(1) + 'deg'); renderBoard(); };
+  $('#btnOk').onclick = confirm_;
+  document.addEventListener('keydown', e => { if (!G.running || G.locked || $('#game').classList.contains('hidden')) return; if (e.key === 'Enter') confirm_(); else if (e.key === 'Backspace') $('#btnUndo').click(); });
+
+  function startTimer() {
+    stopTimer();
+    if (!G.cfg.time) return;
+    G.timeLeft = G.cfg.time; $('#hudTime').textContent = '⏱ ' + G.timeLeft; $('#hudTime').style.color = '';
+    let last = performance.now();
+    G.timer = setInterval(() => {
+      const now = performance.now(); G.timeLeft -= (now - last) / 1000; last = now;
+      const s = Math.max(0, Math.ceil(G.timeLeft)); $('#hudTime').textContent = '⏱ ' + s; $('#hudTime').style.color = s <= 5 ? '#ffd1cc' : '';
+      if (G.timeLeft <= 0) { stopTimer(); judge(false, true); }
+    }, 100);
+  }
+  function stopTimer() { if (G.timer) { clearInterval(G.timer); G.timer = null; } }
+
+  function confirm_() {
+    if (!G.running || G.locked) return;
+    if (G.placed.length < G.tiles.length) { const s = $('#strip'); s.classList.remove('shake'); void s.offsetWidth; s.classList.add('shake'); Egido.toast(t('cumle.fillAll')); return; }
+    const answer = G.placed.map(id => tileById(id).w).join(' ');
+    judge(answer === norm(cur()), false);
+  }
+  function judge(ok, timeout) {
+    G.locked = true; stopTimer();
+    const sentence = norm(cur());
+    $('#strip').classList.add(ok ? 'ok' : 'bad');
+    if (ok) {
+      const bonus = G.cfg.time ? Math.round(Math.max(0, G.timeLeft) / G.cfg.time * 5) : 0;
+      G.score += 10 + bonus; G.correct++;
+      $('#fb').innerHTML = `<b>${t('puzzle.right', { p: 10 + bonus })}</b>`; sfx.good();
+    } else {
+      G.wrong++; G.missed.push(sentence);
+      $('#fb').classList.add('bad'); $('#fb').innerHTML = t(timeout ? 'puzzle.timeIs' : 'puzzle.wrongIs', { w: escapeHtml(sentence) }); sfx.bad();
+      // doğru sırayı şeritte göster
+      G.placed = G.tiles.map(x => x.id).sort((a, b) => a - b); G.tiles.forEach(x => x.used = true); renderBoard();
+    }
+    $('#hudScore').textContent = '⭐ ' + G.score;
+    setTimeout(() => { if (!G.running) return; G.idx++; if (G.idx >= G.order.length) endGame(); else showQuestion(); }, ok ? 1200 : 2600);
+  }
+  $('#btnQuit').onclick = async () => { if (G.running && await EgidoUI.confirm(t('puzzle.quitConfirm'))) endGame('quit'); };
+
+  function endGame(kind) {
+    G.running = false; stopTimer();
+    document.body.classList.remove('playing');
+    const total = G.order.length, time = (performance.now() - G.t0) / 1000;
+    const r = { kind: kind || (G.correct === total ? 'win' : 'lose'), score: G.score, correct: G.correct, total, wrong: G.wrong, time, missed: G.missed, missedTitle: t('cumle.missed') };
+    if (kind === 'quit') { r.emoji = '🚪'; }
+    else if (r.kind === 'win') { r.emoji = '📝'; r.title = t('puzzle.perfect'); r.msg = t('cumle.perfectMsg'); sfx.win(); }
+    else { r.emoji = G.correct >= total / 2 ? '🎉' : '💪'; r.title = t('res.over'); r.msg = t('cumle.overMsg', { t: total, c: G.correct }); (G.correct >= total / 2 ? sfx.win : sfx.lose)(); }
+    Egido.finish(r);
+  }
+
+  renderItems();
+  Egido.init({
+    gameId: 'cumle', emoji: '📝',
+    introRules: () => t('cumle.rules'),
+    readConfig, writeConfig, validate,
+    summary: c => t('cumle.summary', { n: (c.items || []).length }),
+    startGame,
+  });
+})();
+</script>
+</body>
+</html>

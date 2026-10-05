@@ -135,8 +135,7 @@ window.Egido = (() => {
     for (const k of ['setup', 'intro', 'game', 'result']) { const el = $('#' + k); if (el) el.classList.toggle('hidden', k !== name); }
     if (window.EgidoHeader) EgidoHeader.setVisible(name === 'setup'); // başlık yalnızca öğretmen panelinde
   }
-  let toastT;
-  function toast(msg) { const el = $('#toast'); el.textContent = msg; el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 2600); }
+  const toast = (msg, type) => EgidoUI.toast(msg, type);
 
   // ---------- Ayar yardımcıları ----------
   const hash = s => { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); };
@@ -404,7 +403,7 @@ window.Egido = (() => {
     $('#btnCopyUrl').onclick = async () => {
       const url = $('#shareUrl').value;
       try { await navigator.clipboard.writeText(url); toast(t('share.copied')); }
-      catch (e) { $('#shareUrl').focus(); $('#shareUrl').select(); toast(t('share.copyManual')); }
+      catch (e) { $('#shareUrl').focus(); $('#shareUrl').select(); toast(t('share.copyManual'), 'error'); }
     };
     $('#btnBigShare').onclick = () => {
       const code = $('#shareCode').textContent.replace('—', '');
@@ -420,7 +419,7 @@ window.Egido = (() => {
     $('#btnLbClose').onclick = () => $('#lbOverlay').classList.add('hidden');
     $('#btnLbClear').onclick = async () => {
       if (!lbCfg) return;
-      if (!confirm(t('lb.confirm'))) return;
+      if (!(await EgidoUI.confirm(t('lb.confirm')))) return;
       currentSid = newSid();
       const c = readConfig(); lbCfg = c; lbList = []; cfg = c;
       $('#lbBody').innerHTML = renderLb([], player, ''); fillClassOptions([]);
