@@ -5,9 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Egido</title>
 <link rel="icon" type="image/svg+xml" href="shared/logo.svg">
-<link rel="stylesheet" href="shared/egido.css?v=202610051034">
+<link rel="stylesheet" href="shared/egido.css?v=202610051122">
 <style>
   body { overflow: auto; user-select: text; display: flex; flex-direction: column; align-items: center; padding: 36px 16px; min-height: 100vh; color: #fff; }
+  body.has-topbar { padding-top: 84px; }
   h1 { font-size: clamp(28px, 5vw, 44px); margin: 0 0 6px; text-shadow: 0 3px 10px rgba(0,0,0,.3); }
   p.sub { margin: 0 0 26px; opacity: .85; text-align: center; }
   .wrap { width: min(480px, 100%); display: grid; gap: 22px; }
@@ -75,7 +76,6 @@
   <div class="dash hidden" id="dash">
     <div class="dash-head">
       <h2 style="margin:0" data-i18n="home.myGames"></h2>
-      <div class="who">👤 <span id="who"></span> <button class="btn small logout" id="logout"><span>⏻ </span><span data-i18n="tbar.logout"></span></button></div>
     </div>
     <div class="newgames" id="newgames"></div>
     <div class="mylist">
@@ -86,9 +86,10 @@
 
   <footer data-i18n="home.footer"></footer>
 
-<script src="shared/config.js?v=202610051034"></script>
+<script src="shared/config.js?v=202610051122"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="shared/i18n.js?v=202610051034"></script>
+<script src="shared/i18n.js?v=202610051122"></script>
+<script src="shared/header.js?v=202610051122"></script>
 <script>
 (() => {
   const $ = s => document.querySelector(s);
@@ -103,7 +104,7 @@
   const toEmail = u => u.includes('@') ? u : `${u}@${USER_DOMAIN}`;
 
   // Oyun kataloğu: yeni oyun eklenince buraya bir satır eklenir (adlar i18n.js içinde game.<id>.name / .desc)
-  const GAMES = [{ id: 'balon', emoji: '🎈' }, { id: 'gol', emoji: '⚽' }, { id: 'puzzle', emoji: '🧩' }, { id: 'kablo', emoji: '🔌' }];
+  const GAMES = EgidoHeader.GAMES; // katalog tek yerde: shared/header.js
   const gameOf = id => GAMES.find(g => g.id === id) || { id, emoji: '🎮' };
   const gname = g => t('game.' + g.id + '.name') === 'game.' + g.id + '.name' ? g.id : t('game.' + g.id + '.name');
 
@@ -149,7 +150,6 @@
     if (error) { err.textContent = t('home.badLogin'); return; }
     render();
   });
-  $('#logout').onclick = async e => { e.preventDefault(); await sb.auth.signOut(); render(); };
 
   // ---------- Öğretmen paneli ----------
   // Son oynanma: hiç oynanmamışsa "Hiç", 60 günden eskiyse uyarı rengi
@@ -163,8 +163,9 @@
     const session = remote ? (await sb.auth.getSession()).data.session : null;
     $('#guest').classList.toggle('hidden', !!session || !!$('#joining')); // kodla yönlendirme sürerken formlar gizli kalır
     $('#dash').classList.toggle('hidden', !session);
+    EgidoHeader.render({ session, sb, root: location.origin + location.pathname.replace(/index\.html$/, ''), active: 'home' });
+    $('#langHost').classList.toggle('hidden', !!session); // başlıkta dil seçici var
     if (!session) return;
-    $('#who').textContent = session.user.email.replace('@' + USER_DOMAIN, '');
     $('#newgames').innerHTML = GAMES.map(g => `<a class="gcard" href="games/${g.id}/"><span class="emoji">${g.emoji}</span><span><b>+ ${esc(gname(g))}</b><small>${esc(t('game.' + g.id + '.desc'))}</small></span></a>`).join('');
     $('#list').innerHTML = `<div class="empty">${t('loading')}</div>`;
     let { data, error } = await sb.from('sets').select('id,code,game,title,updated_at,last_played_at').order('updated_at', { ascending: false });

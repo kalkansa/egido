@@ -123,10 +123,8 @@ window.Egido = (() => {
     const tb = $('#teacherBarHost');
     if (tb) tb.innerHTML = remote ? `
 <div class="tbar">
-  <a class="tbar-back" href="${ROOT_URL}" data-i18n="tbar.back"></a>
   <input type="text" id="gameTitle" data-i18n-ph="tbar.titlePh" maxlength="120">
   <button class="btn small ok" id="btnSave" data-i18n="tbar.save"></button>
-  ${langSel}
   <span class="tbar-user" id="tbUser"></span>
 </div>` : `<div class="tbar tbar-local"><span data-i18n="tbar.local"></span>${langSel}</div>`;
 
@@ -135,6 +133,7 @@ window.Egido = (() => {
 
   function show(name) {
     for (const k of ['setup', 'intro', 'game', 'result']) { const el = $('#' + k); if (el) el.classList.toggle('hidden', k !== name); }
+    if (window.EgidoHeader) EgidoHeader.setVisible(name === 'setup'); // başlık yalnızca öğretmen panelinde
   }
   let toastT;
   function toast(msg) { const el = $('#toast'); el.textContent = msg; el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 2600); }
@@ -445,11 +444,10 @@ window.Egido = (() => {
   }
 
   function renderUser() {
+    // Giriş varsa üst başlık (menü, dil, çıkış); yoksa çubukta giriş bağlantısı
+    if (window.EgidoHeader) EgidoHeader.render({ session, sb, root: ROOT_URL, active: 'game' });
     const el = $('#tbUser'); if (!el) return;
-    el.innerHTML = session
-      ? `👤 ${escapeHtml(session.user.email.replace('@' + (SB.userDomain || 'egido.local'), ''))} <button class="btn small logout" id="tbLogout">⏻ ${t('tbar.logout')}</button>`
-      : `<a href="${ROOT_URL}">${t('tbar.login')}</a>`;
-    const lo = $('#tbLogout'); if (lo) lo.onclick = async ev => { ev.preventDefault(); await sb.auth.signOut(); location.href = ROOT_URL; };
+    el.innerHTML = session ? '' : `<a href="${ROOT_URL}">${t('tbar.login')}</a>`;
   }
 
   // ---------- Başlangıç ----------

@@ -99,6 +99,28 @@ textarea { min-height: 120px; resize: vertical; line-height: 1.45; }
 .ip-emoji { font-size: 26px; border: 0; background: #f1f5fb; border-radius: 8px; padding: 4px 0; cursor: pointer; line-height: 1.3; }
 .ip-emoji:hover { background: #ffe9c2; }
 
+/* Üst başlık (giriş yapmış öğretmen) */
+.topbar { position: fixed; top: 0; left: 0; right: 0; z-index: 15; height: 54px; display: flex; align-items: center; gap: 14px; padding: 0 16px;
+  background: rgba(10, 30, 70, .82); backdrop-filter: blur(8px); color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,.25); }
+.topbar .brand { display: flex; align-items: center; gap: 8px; color: #fff; text-decoration: none; font-weight: 800; font-size: 20px; }
+.topbar .brand img { width: 28px; height: 28px; }
+.topnav { display: flex; align-items: center; gap: 4px; margin-left: 10px; }
+.topnav a, .topnav .menu-btn { font: inherit; font-size: 14px; font-weight: 600; color: #fff; text-decoration: none; background: none; border: 0; padding: 8px 12px; border-radius: 9px; cursor: pointer; opacity: .9; white-space: nowrap; }
+.topnav a:hover, .topnav .menu-btn:hover { background: rgba(255,255,255,.12); opacity: 1; }
+.topnav a.active, .topnav .menu-btn.active { background: rgba(255,255,255,.18); opacity: 1; }
+.topnav .menu { position: relative; }
+.topnav .menu-list { position: absolute; left: 0; top: calc(100% + 6px); background: #fff; color: var(--ink); border-radius: 12px; box-shadow: 0 12px 34px rgba(0,0,0,.3); padding: 6px; display: none; min-width: 210px; z-index: 40; }
+.topnav .menu.open .menu-list { display: block; }
+.topnav .menu-list a { display: block; color: var(--ink); opacity: 1; padding: 9px 12px; }
+.topnav .menu-list a:hover { background: #eef3fa; }
+.topbar .spacer { flex: 1; }
+.topbar .user { font-size: 14px; opacity: .9; white-space: nowrap; }
+.topbar .btn.logout { margin-left: 0; }
+.topbar .langsel-btn { padding: 4px 8px; }
+body.has-topbar #setup { padding-top: 62px; }
+body.has-topbar #setup .card { max-height: calc(94vh - 62px); }
+@media (max-width: 720px) { .topbar { height: auto; flex-wrap: wrap; padding: 8px 12px; gap: 8px; } .topbar .user { display: none; } body.has-topbar #setup { padding-top: 110px; } }
+
 /* Öğretmen çubuğu (oyun sayfasının üstü) */
 .tbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: #eef3fa; border-radius: 12px; padding: 10px 12px; margin: -6px 0 16px; font-size: 14px; }
 .tbar input { flex: 1; min-width: 160px; padding: 7px 10px; font-size: 14px; }
