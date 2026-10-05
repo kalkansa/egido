@@ -24,6 +24,7 @@ Canlı adres: `https://kalkansa.github.io/egido/`
 | ⚽ Gol Vuruşu | `games/gol/` | Yolda yuvarlanan toplardan doğru cevaplıya vur, gol at; yanlışta kaleci kurtarır ya da top dışarı gider |
 | 🔌 Kablo Eşleştirme | `games/kablo/` | Resmi doğru kelimeye kabloyla bağla; doğruysa lamba yanar, yanlışsa kısa devre |
 | 📝 Cümle Kur | `games/cumle/` | Karışık kelimeleri okul fişi üzerinde doğru sıraya diz |
+| 🔊 Dinle ve Yaz | `games/dinle/` | Cihaz kelimeyi sesli okur (Web Speech API); öğrenci harfleri dizer ya da 4 yazılıştan doğrusunu seçer |
 
 ## Klasör yapısı
 

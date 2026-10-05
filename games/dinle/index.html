@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Kara Tahta</title>
+<link rel="icon" type="image/svg+xml" href="../../shared/logo.svg?v=202610051142">
+<link rel="stylesheet" href="../../shared/egido.css?v=202610051142">
+<style>
+  /* ---------- Öğretmen ---------- */
+  .items { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+  .item { display: grid; grid-template-columns: 56px 1fr auto auto; gap: 10px; align-items: center; background: #f1f5fb; border-radius: 12px; padding: 8px 10px; }
+  .thumb { width: 56px; height: 56px; border-radius: 10px; background: #fff; border: 2px dashed #c9d3e3; display: flex; align-items: center; justify-content: center; font-size: 30px; overflow: hidden; cursor: pointer; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .thumb.empty { font-size: 18px; color: #9aa8bd; }
+  .item input { margin: 0; font-size: 16px; }
+  .item .play { background: none; border: 0; font-size: 22px; cursor: pointer; padding: 4px 6px; }
+  .item .rm { background: none; border: 0; color: var(--bad); font-size: 20px; cursor: pointer; padding: 6px 8px; }
+  .addrow { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  .ttswarn { color: var(--bad); font-size: 13px; margin-top: 6px; }
+
+  /* ---------- Oyun ---------- */
+  body.playing { background: linear-gradient(180deg, #4a148c 0%, #7b1fa2 50%, #ab47bc 100%); }
+  .dz { position: absolute; inset: 0; padding-top: 64px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 14px; }
+  .speaker { display: flex; align-items: center; gap: 14px; }
+  .spk { width: min(28vh, 150px); height: min(28vh, 150px); border-radius: 50%; border: 0; cursor: pointer; font-size: min(14vh, 76px); color: #fff;
+    background: radial-gradient(circle at 35% 30%, #ffd166, #ff9f1c 60%, #e07b00); box-shadow: 0 12px 0 #a85a00, 0 20px 40px rgba(0,0,0,.35); transition: transform .08s; }
+  .spk:active { transform: translateY(8px); box-shadow: 0 4px 0 #a85a00; }
+  .spk.talking { animation: pulse .6s ease-in-out infinite alternate; }
+  @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.06); } }
+  .slow { font-size: 34px; background: rgba(255,255,255,.18); border: 0; border-radius: 50%; width: 64px; height: 64px; cursor: pointer; color: #fff; }
+  .slow:active { background: rgba(255,255,255,.3); }
+  .dz-img { height: 90px; display: flex; align-items: center; justify-content: center; }
+  .dz-img img { max-height: 90px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,.3); }
+  .dz-img .emo { font-size: 72px; line-height: 1; }
+  .dz-hint { color: rgba(255,255,255,.85); font-size: 16px; }
+  /* harf dizme */
+  .slots, .tiles { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 96vw; }
+  .slot { width: var(--tz); height: var(--tz); border-radius: 10px; border: 3px dashed rgba(255,255,255,.55); display: flex; align-items: center; justify-content: center; font-size: calc(var(--tz) * .55); font-weight: 900; color: #fff; background: rgba(0,0,0,.18); cursor: pointer; }
+  .slot.gap { border: 0; background: none; width: calc(var(--tz) * .5); cursor: default; }
+  .slot.filled { border-style: solid; border-color: #fff; background: #fff; color: var(--ink); }
+  .slot.locked { background: #ffe9c2; border-color: #ffbf69; cursor: default; }
+  .slot.ok { background: #bff3cf; border-color: var(--ok); } .slot.bad { background: #ffd0cb; border-color: var(--bad); }
+  .slots.shake { animation: shake .35s; }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-10px); } 40% { transform: translateX(10px); } 60% { transform: translateX(-6px); } 80% { transform: translateX(6px); } }
+  .tiles { min-height: calc(var(--tz) + 16px); padding: 6px 0; }
+  .tile { position: relative; width: var(--tz); height: var(--tz); border-radius: 12px; background: linear-gradient(180deg, #ffe08a, #ffb703); color: #4a2d00; display: flex; align-items: center; justify-content: center; font-size: calc(var(--tz) * .58); font-weight: 900; cursor: pointer; user-select: none; box-shadow: 0 5px 0 #c77d00, 0 8px 16px rgba(0,0,0,.25); transition: transform .12s, opacity .15s; transform: rotate(var(--rot)); }
+  .tile::before { content: ''; position: absolute; top: -9px; left: 50%; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%; background: #ffd25e; }
+  .tile:active { transform: rotate(var(--rot)) translateY(3px); box-shadow: 0 2px 0 #c77d00; }
+  .tile.used { opacity: 0; pointer-events: none; transform: scale(.6); }
+  /* seçenekler */
+  .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: min(92vw, 700px); }
+  @media (max-width: 520px) { .choices { grid-template-columns: 1fr; } }
+  .choice { font: inherit; font-size: clamp(20px, 3.4vw, 32px); font-weight: 800; letter-spacing: .04em; padding: 18px 12px; border-radius: 16px; border: 3px solid transparent; background: #fff; color: var(--ink); cursor: pointer; box-shadow: 0 8px 0 #c9cfd8, 0 12px 24px rgba(0,0,0,.25); transition: transform .08s; }
+  .choice:active { transform: translateY(6px); box-shadow: 0 2px 0 #c9cfd8; }
+  .choice.ok { background: #bff3cf; border-color: var(--ok); box-shadow: 0 8px 0 #1e8c4c; }
+  .choice.bad { background: #ffd0cb; border-color: var(--bad); box-shadow: 0 8px 0 #a93226; }
+  .choice[disabled] { cursor: default; }
+  .dz-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .dz-fb { min-height: 34px; color: #fff; font-size: 22px; font-weight: 800; text-shadow: 0 2px 6px rgba(0,0,0,.4); text-align: center; }
+  .dz-fb b { color: #bff3cf; } .dz-fb.bad b { color: #ffd0cb; }
+</style>
+</head>
+<body>
+
+<!-- ===================== ÖĞRETMEN KURULUM ===================== -->
+<div id="setup" class="screen">
+  <div class="card">
+    <div id="teacherBarHost"></div>
+    <h1 data-i18n="dinle.title"></h1>
+    <p class="sub" data-i18n="dinle.sub"></p>
+
+    <div class="cols">
+      <div>
+        <label for="wlang" data-i18n="dinle.lang"></label>
+        <select id="wlang"><option value="en">🇬🇧 English</option><option value="de">🇩🇪 Deutsch</option><option value="es">🇪🇸 Español</option><option value="tr">🇹🇷 Türkçe</option></select>
+      </div>
+      <div>
+        <label for="mode" data-i18n="dinle.mode"></label>
+        <select id="mode"><option value="choice" selected data-i18n="dinle.modeChoice"></option><option value="tiles" data-i18n="dinle.modeTiles"></option></select>
+      </div>
+    </div>
+    <div class="ttswarn hidden" id="ttsWarn" data-i18n="dinle.noTts"></div>
+
+    <label data-i18n="dinle.items"></label>
+    <div class="items" id="items"></div>
+    <div class="addrow">
+      <button class="btn secondary" id="btnAdd" data-i18n="puzzle.add"></button>
+      <button class="btn secondary" id="btnExample" data-i18n="setup.example"></button>
+    </div>
+
+    <div class="cols four">
+      <div>
+        <label for="order" data-i18n="puzzle.order"></label>
+        <select id="order"><option value="random" selected data-i18n="puzzle.random"></option><option value="fixed" data-i18n="puzzle.fixed"></option></select>
+      </div>
+      <div>
+        <label for="time" data-i18n="puzzle.time"></label>
+        <select id="time"><option value="0" data-i18n="puzzle.noTime"></option><option value="15">15 s</option><option value="30" selected>30 s</option><option value="45">45 s</option><option value="60">60 s</option></select>
+      </div>
+      <div>
+        <label for="extra" data-i18n="puzzle.extra"></label>
+        <select id="extra"><option value="0" selected data-i18n="puzzle.none"></option><option value="2">+2</option><option value="4">+4</option></select>
+      </div>
+      <div>
+        <label for="hint" data-i18n="puzzle.hint"></label>
+        <select id="hint"><option value="0" selected data-i18n="puzzle.none"></option><option value="1" data-i18n="puzzle.firstLetter"></option></select>
+      </div>
+    </div>
+    <p class="hint" data-i18n="dinle.help"></p>
+
+    <div class="err" id="setupErr"></div>
+    <div class="row">
+      <button class="btn" id="btnStart" data-i18n="setup.try"></button>
+      <button class="btn" id="btnShare" data-i18n="setup.code"></button>
+      <button class="btn secondary" id="btnLbSetup" data-i18n="setup.lb"></button>
+    </div>
+    <div id="sharePanelHost"></div>
+  </div>
+</div>
+
+<!-- ===================== OYUN ===================== -->
+<div id="game" class="screen hidden">
+  <div class="hud">
+    <div class="pill" id="hudPlayer">👤</div>
+    <div class="pill progress" id="hudScore">⭐ 0</div>
+    <div class="q"></div>
+    <div class="pill progress" id="hudProg">1/1</div>
+    <div class="pill progress" id="hudTime">⏱ 30</div>
+    <div class="pill pauseBtn" id="btnQuit">✕</div>
+  </div>
+  <div class="dz" id="dz">
+    <div class="speaker">
+      <button class="spk" id="btnSpeak" title="">🔊</button>
+      <button class="slow" id="btnSlow" title="">🐢</button>
+    </div>
+    <div class="dz-img" id="dzImg"></div>
+    <div class="dz-hint" id="dzHint"></div>
+    <div id="tilesMode" class="hidden" style="display:contents">
+      <div class="slots" id="slots"></div>
+      <div class="tiles" id="tiles"></div>
+      <div class="dz-actions">
+        <button class="btn secondary" id="btnUndo" data-i18n="puzzle.undo"></button>
+        <button class="btn secondary" id="btnShuffle" data-i18n="puzzle.shuffle"></button>
+        <button class="btn ok big" id="btnOk" data-i18n="puzzle.ok"></button>
+      </div>
+    </div>
+    <div class="choices hidden" id="choices"></div>
+    <div class="dz-fb" id="fb"></div>
+  </div>
+  <div id="countdown" class="hidden"></div>
+</div>
+
+<script src="../../shared/config.js?v=202610051142"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="../../shared/i18n.js?v=202610051142"></script>
+<script src="../../shared/ui.js?v=202610051142"></script>
+<script src="../../shared/header.js?v=202610051142"></script>
+<script src="../../shared/egido.js?v=202610051142"></script>
+<script src="../../shared/imagepicker.js?v=202610051142"></script>
+<script>
+(() => {
+  'use strict';
+  const $ = s => document.querySelector(s);
+  const t = I18N.t;
+  const { sfx, escapeHtml, shuffle } = Egido;
+  const LOCALE = { en: 'en-US', de: 'de-DE', es: 'es-ES', tr: 'tr-TR' };
+  const ALPHA = { tr: 'ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ', de: 'ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜ', es: 'ABCDEFGHIJLMNÑOPQRSTUVXYZÁÉÍÓÚ', en: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' };
+  const VOWELS = { tr: 'AEIİOÖUÜ', de: 'AEIOUÄÖÜ', es: 'AEIOUÁÉÍÓÚ', en: 'AEIOU' };
+  const upIn = (s, l) => (l === 'tr' ? s.toLocaleUpperCase('tr') : s.toLocaleUpperCase(LOCALE[l] || 'en'));
+
+  // ---------- Sesli okuma (Web Speech API) ----------
+  const TTS = {
+    ok: 'speechSynthesis' in window, voices: [],
+    load() { if (!this.ok) return; this.voices = speechSynthesis.getVoices(); },
+    voiceFor(l) { const want = (LOCALE[l] || 'en').slice(0, 2); const vs = this.voices.filter(v => v.lang.toLowerCase().startsWith(want)); return vs.find(v => /google|natural|neural|premium/i.test(v.name)) || vs[0] || null; },
+    speak(text, l, slow, onstart, onend) {
+      if (!this.ok) return false;
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = LOCALE[l] || 'en-US'; const v = this.voiceFor(l); if (v) u.voice = v;
+      u.rate = slow ? .6 : .9; u.pitch = 1;
+      u.onstart = onstart || null; u.onend = onend || null; u.onerror = onend || null;
+      speechSynthesis.speak(u); return true;
+    },
+  };
+  TTS.load(); if (TTS.ok) speechSynthesis.onvoiceschanged = () => TTS.load();
+  $('#ttsWarn').classList.toggle('hidden', TTS.ok);
+
+  // ---------- Öğretmen ----------
+  let items = []; // [{ word, img }]
+  function thumbHtml(img) { if (!img) return '📷'; if (img.startsWith('emoji:')) return escapeHtml(img.slice(6)); return `<img src="${escapeHtml(img)}" alt="">`; }
+  function renderItems() {
+    const box = $('#items');
+    box.innerHTML = items.map((it, i) => `
+      <div class="item" data-i="${i}">
+        <div class="thumb ${it.img ? '' : 'empty'}" title="${t('puzzle.pick')}">${thumbHtml(it.img)}</div>
+        <input type="text" class="word" placeholder="${t('dinle.wordPh')}" maxlength="30" value="${escapeHtml(it.word)}">
+        <button class="play" title="${t('dinle.listen')}">🔊</button>
+        <button class="rm" title="${t('puzzle.remove')}">✕</button>
+      </div>`).join('') || `<div class="hint">${t('puzzle.noItems')}</div>`;
+    box.querySelectorAll('.item').forEach(row => {
+      const i = +row.dataset.i;
+      row.querySelector('.thumb').onclick = () => ImagePicker.open({ onPick: img => { items[i].img = img; renderItems(); } });
+      row.querySelector('.word').oninput = e => { items[i].word = e.target.value; };
+      row.querySelector('.word').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); $('#btnAdd').click(); } };
+      row.querySelector('.play').onclick = () => { if (!TTS.speak(items[i].word, $('#wlang').value, false)) Egido.toast(t('dinle.noTts'), 'error'); };
+      row.querySelector('.rm').onclick = () => { items.splice(i, 1); renderItems(); };
+    });
+  }
+  document.addEventListener('egido:lang', renderItems);
+  $('#btnAdd').onclick = () => { items.push({ word: '', img: '' }); renderItems(); const rows = document.querySelectorAll('.item .word'); if (rows.length) rows[rows.length - 1].focus(); };
+  $('#btnExample').onclick = () => writeConfig({ items: t('dinle.ex').split('|').map(w => ({ word: w, img: '' })), lang: 'en', mode: 'choice', order: 'random', time: 30, extra: 0, hint: 0 });
+
+  function readConfig() {
+    const l = $('#wlang').value;
+    return { items: items.map(it => ({ word: upIn(it.word.trim(), l).replace(/\s+/g, ' '), img: it.img || '' })).filter(it => it.word),
+      lang: l, mode: $('#mode').value, order: $('#order').value, time: +$('#time').value, extra: +$('#extra').value, hint: +$('#hint').value };
+  }
+  function writeConfig(c) {
+    items = (c.items || []).map(it => ({ word: it.word || '', img: it.img || '' }));
+    $('#wlang').value = c.lang || 'en'; $('#mode').value = c.mode || 'choice';
+    $('#order').value = c.order || 'random'; $('#time').value = c.time != null ? c.time : 30;
+    $('#extra').value = c.extra != null ? c.extra : 0; $('#hint').value = c.hint != null ? c.hint : 0;
+    renderItems();
+  }
+  function validate(c) {
+    if (!Array.isArray(c.items) || !c.items.length) return t('dinle.errEmpty');
+    if (c.mode === 'choice' && c.items.length < 2) return t('dinle.errMin');
+    for (const it of c.items) { const n = it.word.replace(/ /g, '').length; if (n < 2) return t('puzzle.errShort', { w: it.word }); if (n > 16) return t('puzzle.errLong', { w: it.word }); }
+    return '';
+  }
+
+  // ---------- Oyun ----------
+  const G = { cfg: null, running: false, order: [], idx: 0, score: 0, correct: 0, wrong: 0, missed: [], t0: 0, slots: [], tiles: [], locked: false, timer: null, timeLeft: 0, plays: 0 };
+  const cur = () => G.cfg.items[G.order[G.idx]];
+  const wlang = () => G.cfg.lang || 'en';
+
+  function startGame(cfg) {
+    G.cfg = cfg;
+    Object.assign(G, { running: true, idx: 0, score: 0, correct: 0, wrong: 0, missed: [], t0: performance.now(), locked: false });
+    G.order = cfg.items.map((_, i) => i); if (cfg.order === 'random') G.order = shuffle(G.order);
+    document.body.classList.add('playing');
+    const p = Egido.player; $('#hudPlayer').textContent = '👤 ' + p.name + (p.cls ? ' · ' + p.cls : '');
+    $('#hudTime').classList.toggle('hidden', !cfg.time);
+    $('#tilesMode').classList.toggle('hidden', cfg.mode !== 'tiles'); $('#choices').classList.toggle('hidden', cfg.mode !== 'choice');
+    $('#btnSpeak').title = t('dinle.listen'); $('#btnSlow').title = t('dinle.slow');
+    $('#dz').style.visibility = 'hidden';
+    if (!TTS.ok) Egido.toast(t('dinle.noTts'), 'error');
+    Egido.countdown(3, () => { $('#dz').style.visibility = ''; showQuestion(); }, () => G.running);
+  }
+  function speak(slow) {
+    const b = $('#btnSpeak');
+    const ok = TTS.speak(cur().word, wlang(), slow, () => b.classList.add('talking'), () => b.classList.remove('talking'));
+    if (!ok) Egido.toast(t('dinle.noTts'), 'error');
+  }
+  $('#btnSpeak').onclick = () => speak(false);
+  $('#btnSlow').onclick = () => speak(true);
+
+  function showQuestion() {
+    if (!G.running) return;
+    const q = cur();
+    $('#hudScore').textContent = '⭐ ' + G.score;
+    $('#hudProg').textContent = `${G.idx + 1}/${G.order.length}`;
+    $('#fb').textContent = ''; $('#fb').classList.remove('bad');
+    $('#dzImg').innerHTML = !q.img ? '' : q.img.startsWith('emoji:') ? `<div class="emo">${escapeHtml(q.img.slice(6))}</div>` : `<img src="${escapeHtml(q.img)}" alt="">`;
+    $('#dzHint').textContent = t('dinle.tapToListen');
+    G.locked = false;
+    if (G.cfg.mode === 'tiles') buildTiles(q.word); else buildChoices(q.word);
+    startTimer();
+    setTimeout(() => speak(false), 350); // soru açılınca bir kez oku
+  }
+
+  // --- harf dizme ---
+  function buildTiles(word) {
+    const letters = word.replace(/ /g, '').split('');
+    const tz = Math.max(40, Math.min(72, Math.floor((Math.min(window.innerWidth, 900) - 40) / (word.length + 1)) - 8));
+    document.documentElement.style.setProperty('--tz', tz + 'px');
+    G.slots = word.split('').map(ch => ({ ch, gap: ch === ' ', tile: null, locked: false }));
+    const pool = letters.slice(), A = ALPHA[wlang()] || ALPHA.en;
+    for (let i = 0; i < G.cfg.extra; i++) pool.push(A[Math.floor(Math.random() * A.length)]);
+    let order = shuffle(pool);
+    for (let k = 0; k < 5 && order.join('') === letters.join(''); k++) order = shuffle(pool);
+    G.tiles = order.map((ch, i) => ({ id: i, ch, used: false, rot: (Math.random() * 16 - 8).toFixed(1) + 'deg' }));
+    if (G.cfg.hint) { const s = G.slots.find(x => !x.gap), tl = G.tiles.find(x => x.ch === s.ch); s.tile = tl.id; s.locked = true; tl.used = true; }
+    renderTiles();
+  }
+  function renderTiles() {
+    $('#slots').innerHTML = G.slots.map((s, i) => s.gap ? '<div class="slot gap"></div>' : `<div class="slot ${s.tile != null ? 'filled' : ''} ${s.locked ? 'locked' : ''}" data-i="${i}">${s.tile != null ? escapeHtml(G.tiles[s.tile].ch) : ''}</div>`).join('');
+    $('#tiles').innerHTML = G.tiles.map(tl => `<div class="tile ${tl.used ? 'used' : ''}" data-id="${tl.id}" style="--rot:${tl.rot}">${escapeHtml(tl.ch)}</div>`).join('');
+    $('#slots').querySelectorAll('.slot.filled:not(.locked)').forEach(el => el.onclick = () => unplace(+el.dataset.i));
+    $('#tiles').querySelectorAll('.tile:not(.used)').forEach(el => el.onclick = () => place(+el.dataset.id));
+  }
+  function place(id) { if (G.locked) return; const s = G.slots.find(x => !x.gap && x.tile == null); if (!s) return; s.tile = id; G.tiles[id].used = true; sfx.click(); renderTiles(); }
+  function unplace(i) { if (G.locked) return; const s = G.slots[i]; if (s.tile == null || s.locked) return; G.tiles[s.tile].used = false; s.tile = null; renderTiles(); }
+  $('#btnUndo').onclick = () => { for (let i = G.slots.length - 1; i >= 0; i--) if (G.slots[i].tile != null && !G.slots[i].locked) { unplace(i); return; } };
+  $('#btnShuffle').onclick = () => { if (G.locked) return; const free = shuffle(G.tiles.filter(x => !x.used)); let k = 0; G.tiles = G.tiles.map(x => x.used ? x : free[k++]); G.tiles.forEach(x => x.rot = (Math.random() * 16 - 8).toFixed(1) + 'deg'); renderTiles(); };
+  $('#btnOk').onclick = () => {
+    if (!G.running || G.locked) return;
+    if (!G.slots.every(s => s.gap || s.tile != null)) { const s = $('#slots'); s.classList.remove('shake'); void s.offsetWidth; s.classList.add('shake'); Egido.toast(t('puzzle.fillAll')); return; }
+    judge(G.slots.map(s => s.gap ? ' ' : G.tiles[s.tile].ch).join('') === cur().word, false);
+  };
+  document.addEventListener('keydown', e => {
+    if (!G.running || G.locked || $('#game').classList.contains('hidden') || G.cfg.mode !== 'tiles') return;
+    if (e.key === 'Enter') return $('#btnOk').click();
+    if (e.key === 'Backspace') return $('#btnUndo').click();
+    if (e.key.length === 1) { const ch = upIn(e.key, wlang()); const tl = G.tiles.find(x => !x.used && x.ch === ch); if (tl) place(tl.id); }
+  });
+
+  // --- seçenekler: yanlış yazımlar üretilir ---
+  function misspellings(word) {
+    const l = wlang(), V = VOWELS[l] || VOWELS.en, A = ALPHA[l] || ALPHA.en, out = new Set(), w = word;
+    const add = s => { if (s && s !== w && s.replace(/ /g, '').length >= 2) out.add(s); };
+    for (let i = 0; i < w.length - 1; i++) if (w[i] !== w[i + 1] && w[i] !== ' ' && w[i + 1] !== ' ') add(w.slice(0, i) + w[i + 1] + w[i] + w.slice(i + 2)); // komşu harf değişimi
+    for (let i = 0; i < w.length; i++) if (w[i] !== ' ') add(w.slice(0, i) + w.slice(i + 1));                                      // harf düşürme
+    for (let i = 0; i < w.length; i++) if (V.includes(w[i])) for (const v of V) if (v !== w[i]) add(w.slice(0, i) + v + w.slice(i + 1)); // sesli harf değişimi
+    for (let i = 0; i < w.length; i++) if (w[i] !== ' ') add(w.slice(0, i) + w[i] + w[i] + w.slice(i + 1));                           // harf ikileme
+    for (let i = 1; i < w.length; i++) if (w[i] !== ' ') add(w.slice(0, i) + A[Math.floor(Math.random() * A.length)] + w.slice(i + 1));  // rastgele harf
+    return shuffle([...out]);
+  }
+  function buildChoices(word) {
+    const others = shuffle(G.cfg.items.map(x => x.word).filter(x => x !== word));
+    const pool = [...misspellings(word).slice(0, 6), ...others]; // önce yakın yazımlar, sonra listedeki diğer kelimeler
+    const picked = []; for (const c of shuffle(pool.slice(0, 6)).concat(pool.slice(6))) { if (picked.length >= 3) break; if (!picked.includes(c) && c !== word) picked.push(c); }
+    const opts = shuffle([word, ...picked]);
+    $('#choices').innerHTML = opts.map(o => `<button class="choice" data-w="${escapeHtml(o)}">${escapeHtml(o)}</button>`).join('');
+    $('#choices').querySelectorAll('.choice').forEach(b => b.onclick = () => {
+      if (G.locked) return;
+      const ok = b.dataset.w === word;
+      $('#choices').querySelectorAll('.choice').forEach(x => { x.disabled = true; if (x.dataset.w === word) x.classList.add('ok'); });
+      if (!ok) b.classList.add('bad');
+      judge(ok, false);
+    });
+  }
+
+  function startTimer() {
+    stopTimer();
+    if (!G.cfg.time) return;
+    G.timeLeft = G.cfg.time; $('#hudTime').textContent = '⏱ ' + G.timeLeft; $('#hudTime').style.color = '';
+    let last = performance.now();
+    G.timer = setInterval(() => {
+      const now = performance.now(); G.timeLeft -= (now - last) / 1000; last = now;
+      const s = Math.max(0, Math.ceil(G.timeLeft)); $('#hudTime').textContent = '⏱ ' + s; $('#hudTime').style.color = s <= 5 ? '#ffd1cc' : '';
+      if (G.timeLeft <= 0) { stopTimer(); judge(false, true); }
+    }, 100);
+  }
+  function stopTimer() { if (G.timer) { clearInterval(G.timer); G.timer = null; } }
+
+  function judge(ok, timeout) {
+    G.locked = true; stopTimer();
+    const word = cur().word;
+    if (G.cfg.mode === 'tiles') $('#slots').querySelectorAll('.slot:not(.gap)').forEach(el => el.classList.add(ok ? 'ok' : 'bad'));
+    else if (timeout) $('#choices').querySelectorAll('.choice').forEach(x => { x.disabled = true; if (x.dataset.w === word) x.classList.add('ok'); });
+    if (ok) {
+      const bonus = G.cfg.time ? Math.round(Math.max(0, G.timeLeft) / G.cfg.time * 5) : 0;
+      G.score += 10 + bonus; G.correct++;
+      $('#fb').innerHTML = `<b>${t('puzzle.right', { p: 10 + bonus })}</b>`; sfx.good();
+    } else {
+      G.wrong++; G.missed.push(word);
+      $('#fb').classList.add('bad'); $('#fb').innerHTML = t(timeout ? 'puzzle.timeIs' : 'puzzle.wrongIs', { w: escapeHtml(word) }); sfx.bad();
+      setTimeout(() => speak(false), 500); // doğrusunu bir kez daha dinlet
+    }
+    $('#hudScore').textContent = '⭐ ' + G.score;
+    setTimeout(() => { if (!G.running) return; G.idx++; if (G.idx >= G.order.length) endGame(); else showQuestion(); }, ok ? 1300 : 2600);
+  }
+  $('#btnQuit').onclick = async () => { if (G.running && await EgidoUI.confirm(t('puzzle.quitConfirm'))) endGame('quit'); };
+
+  function endGame(kind) {
+    G.running = false; stopTimer(); if (TTS.ok) speechSynthesis.cancel();
+    document.body.classList.remove('playing');
+    const total = G.order.length, time = (performance.now() - G.t0) / 1000;
+    const r = { kind: kind || (G.correct === total ? 'win' : 'lose'), score: G.score, correct: G.correct, total, wrong: G.wrong, time, missed: G.missed, missedTitle: t('puzzle.missed') };
+    if (kind === 'quit') { r.emoji = '🚪'; }
+    else if (r.kind === 'win') { r.emoji = '🎧'; r.title = t('puzzle.perfect'); r.msg = t('dinle.perfectMsg'); sfx.win(); }
+    else { r.emoji = G.correct >= total / 2 ? '🎉' : '💪'; r.title = t('res.over'); r.msg = t('dinle.overMsg', { t: total, c: G.correct }); (G.correct >= total / 2 ? sfx.win : sfx.lose)(); }
+    Egido.finish(r);
+  }
+
+  renderItems();
+  Egido.init({
+    gameId: 'dinle', emoji: '🔊',
+    introRules: () => t('dinle.rules'),
+    readConfig, writeConfig, validate,
+    summary: c => t('dinle.summary', { n: (c.items || []).length }),
+    startGame,
+  });
+})();
+</script>
+</body>
+</html>
