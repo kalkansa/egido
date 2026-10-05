@@ -25,6 +25,7 @@ Canlı adres: `https://kalkansa.github.io/egido/`
 | 🔌 Kablo Eşleştirme | `games/kablo/` | Resmi doğru kelimeye kabloyla bağla; doğruysa lamba yanar, yanlışsa kısa devre |
 | 📝 Cümle Kur | `games/cumle/` | Karışık kelimeleri okul fişi üzerinde doğru sıraya diz |
 | 🔊 Dinle ve Yaz | `games/dinle/` | Cihaz kelimeyi sesli okur (Web Speech API); öğrenci harfleri dizer ya da 4 yazılıştan doğrusunu seçer |
+| 🐧 Zıp Zıp Penguen | `games/penguen/` | Soru başına 3-4 buz bloğu; doğruya zıplayınca yeni bloklar, yanlışta buz çatlar ve penguen suya düşer |
 
 ## Klasör yapısı
 
