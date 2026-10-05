@@ -3,7 +3,15 @@
 // Dil seçimi: ?lang=xx › localStorage › tarayıcı dili › tr. Öğretmenin dili oyun ayarına yazılır, öğrenci o dille açar.
 window.I18N = (() => {
   'use strict';
-  const LANGS = [['tr', '🇹🇷 Türkçe'], ['en', '🇬🇧 English'], ['de', '🇩🇪 Deutsch'], ['es', '🇪🇸 Español']];
+  const LANGS = [['tr', 'Türkçe'], ['en', 'English'], ['de', 'Deutsch'], ['es', 'Español']];
+  // Renkli bayraklar: satır içi SVG, her cihazda aynı görünür (Windows emoji bayrak çizmez)
+  const FLAGS = {
+    tr: '<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#E30A17"/><circle cx="11" cy="10" r="5.2" fill="#fff"/><circle cx="12.4" cy="10" r="4.2" fill="#E30A17"/><polygon points="17.6,7.6 18.3,9.6 20.4,9.6 18.7,10.9 19.3,12.9 17.6,11.7 15.9,12.9 16.5,10.9 14.8,9.6 16.9,9.6" fill="#fff"/></svg>',
+    en: '<svg viewBox="0 0 60 30"><rect width="60" height="30" fill="#012169"/><path d="M0,0 60,30 M60,0 0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 60,30 M60,0 0,30" stroke="#C8102E" stroke-width="2"/><path d="M30,0 V30 M0,15 H60" stroke="#fff" stroke-width="10"/><path d="M30,0 V30 M0,15 H60" stroke="#C8102E" stroke-width="6"/></svg>',
+    de: '<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#FFCE00"/><rect width="30" height="13.33" fill="#DD0000"/><rect width="30" height="6.67" fill="#000"/></svg>',
+    es: '<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#AA151B"/><rect y="5" width="30" height="10" fill="#F1BF00"/></svg>',
+  };
+  const flag = c => `<span class="flag">${FLAGS[c] || ''}</span>`;
   const D = {
   tr: {
     // ortak
@@ -379,7 +387,11 @@ window.I18N = (() => {
     root.querySelectorAll('[data-i18n]').forEach(el => { el.innerHTML = t(el.dataset.i18n); });
     root.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
     root.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); });
-    root.querySelectorAll('select.langsel').forEach(sel => { sel.value = lang; });
+    root.querySelectorAll('.langsel').forEach(el => {
+      const cur = LANGS.find(l => l[0] === lang) || LANGS[0];
+      el.querySelector('.langsel-btn').innerHTML = `${flag(cur[0])}<span>${cur[1]}</span><i>▾</i>`;
+      el.querySelectorAll('.langsel-menu button').forEach(b => b.classList.toggle('active', b.dataset.l === lang));
+    });
     document.documentElement.lang = lang;
   }
   function set(l, opts) {
@@ -390,11 +402,20 @@ window.I18N = (() => {
     document.dispatchEvent(new CustomEvent('egido:lang', { detail: { lang } }));
   }
   function selectorHtml(cls) {
-    return `<select class="langsel ${cls || ''}" title="${t('lang')}">` + LANGS.map(([c, n]) => `<option value="${c}" ${c === lang ? 'selected' : ''}>${n}</option>`).join('') + '</select>';
+    const cur = LANGS.find(l => l[0] === lang) || LANGS[0];
+    return `<div class="langsel ${cls || ''}" title="${t('lang')}">
+      <button type="button" class="langsel-btn">${flag(cur[0])}<span>${cur[1]}</span><i>▾</i></button>
+      <div class="langsel-menu">${LANGS.map(([c, n]) => `<button type="button" data-l="${c}" class="${c === lang ? 'active' : ''}">${flag(c)}<span>${n}</span></button>`).join('')}</div>
+    </div>`;
   }
   function bindSelectors(root) {
-    (root || document).querySelectorAll('select.langsel').forEach(sel => { sel.onchange = () => set(sel.value); });
+    (root || document).querySelectorAll('.langsel:not([data-wired])').forEach(el => {
+      el.dataset.wired = '1';
+      el.querySelector('.langsel-btn').onclick = e => { e.stopPropagation(); document.querySelectorAll('.langsel.open').forEach(x => x !== el && x.classList.remove('open')); el.classList.toggle('open'); };
+      el.querySelectorAll('.langsel-menu button').forEach(b => b.onclick = e => { e.stopPropagation(); el.classList.remove('open'); set(b.dataset.l); });
+    });
   }
+  document.addEventListener('click', () => document.querySelectorAll('.langsel.open').forEach(x => x.classList.remove('open')));
   document.addEventListener('DOMContentLoaded', () => { apply(); bindSelectors(); });
   return { t, apply, set, selectorHtml, bindSelectors, LANGS, get lang() { return lang; }, get codes() { return codes; } };
 })();

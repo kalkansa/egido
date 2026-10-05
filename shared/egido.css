@@ -63,8 +63,17 @@ textarea { min-height: 120px; resize: vertical; line-height: 1.45; }
   padding: 10px 18px; border-radius: 10px; font-size: 14px; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 10; }
 .toast.show { opacity: 1; }
 
-/* Dil seçici */
-select.langsel { width: auto; padding: 6px 28px 6px 10px; font-size: 13px; border-radius: 8px; background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235b6b85'/%3E%3C/svg%3E") no-repeat right 10px center; appearance: none; -webkit-appearance: none; }
+/* Dil seçici (renkli SVG bayraklı açılır menü) */
+.langsel { position: relative; display: inline-block; font-size: 13px; }
+.langsel-btn { display: flex; align-items: center; gap: 7px; font: inherit; font-size: 13px; font-weight: 600; color: var(--ink); background: #fff; border: 2px solid #d7deea; border-radius: 8px; padding: 5px 9px; cursor: pointer; }
+.langsel-btn i { font-style: normal; color: var(--muted); font-size: 11px; }
+.langsel .flag { display: inline-flex; width: 24px; height: 16px; border-radius: 3px; overflow: hidden; box-shadow: 0 0 0 1px rgba(0,0,0,.15); flex: 0 0 auto; }
+.langsel .flag svg { width: 100%; height: 100%; display: block; }
+.langsel-menu { position: absolute; right: 0; top: calc(100% + 4px); background: #fff; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.28); padding: 6px; display: none; z-index: 40; min-width: 160px; }
+.langsel.open .langsel-menu { display: block; }
+.langsel-menu button { display: flex; align-items: center; gap: 9px; width: 100%; font: inherit; font-size: 14px; color: var(--ink); background: none; border: 0; padding: 8px 10px; border-radius: 8px; cursor: pointer; text-align: left; white-space: nowrap; }
+.langsel-menu button:hover { background: #eef3fa; }
+.langsel-menu button.active { background: #ffe9c2; font-weight: 700; }
 .langrow { display: flex; justify-content: flex-end; margin: -10px -10px 0 0; }
 .langfixed { position: fixed; top: 12px; right: 12px; z-index: 9; }
 
