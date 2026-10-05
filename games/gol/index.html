@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Kara Tahta</title>
 <link rel="icon" type="image/svg+xml" href="../../shared/logo.svg?v=202610051251">
-<link rel="stylesheet" href="../../shared/egido.css?v=202610051302">
+<link rel="stylesheet" href="../../shared/egido.css?v=202610051507">
 <style>
   .ta-ok { border-color: #bfe9cf; } .ta-ok:focus { border-color: var(--ok); }
   .ta-bad { border-color: #f5c6c1; } .ta-bad:focus { border-color: var(--bad); }
@@ -95,13 +95,13 @@
   </div>
 </div>
 
-<script src="../../shared/config.js?v=202610051302"></script>
+<script src="../../shared/config.js?v=202610051507"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="../../shared/i18n.js?v=202610051302"></script>
-<script src="../../shared/ui.js?v=202610051302"></script>
-<script src="../../shared/header.js?v=202610051302"></script>
-<script src="../../shared/egido.js?v=202610051302"></script>
+<script src="../../shared/i18n.js?v=202610051507"></script>
+<script src="../../shared/ui.js?v=202610051507"></script>
+<script src="../../shared/header.js?v=202610051507"></script>
+<script src="../../shared/egido.js?v=202610051507"></script>
 <script>
 (() => {
   'use strict';
@@ -142,6 +142,7 @@
   let W = 0, H = 0, DPR = 1, TOP = 120;
   const L = {}; // yerleşim: kale, kaleci, oyuncu, yol
   function resize() {
+    if (!canvas.clientWidth || !canvas.clientHeight) return;
     DPR = Math.min(window.devicePixelRatio || 1, 2);
     W = canvas.clientWidth; H = canvas.clientHeight;
     canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
@@ -230,7 +231,7 @@
 
     for (let i = G.balls.length - 1; i >= 0; i--) {
       const b = G.balls[i];
-      b.x += b.vx * dt; b.rot += (b.vx / L.ballR) * dt;
+      b.x += b.vx * dt; b.rot += (b.vx / L.ballR) * dt; b.y = L.laneY;
       if ((b.vx < 0 && b.x < -b.bw) || (b.vx > 0 && b.x > W + b.bw)) { G.balls.splice(i, 1); G.onScreen.delete(b.text); }
     }
     // Kaleci: boşta hafif salınır, şutta hedefe atlar
@@ -407,6 +408,7 @@
   function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
 
   function draw() {
+    if (canvas.clientWidth !== W || canvas.clientHeight !== H) resize(); // bölme/adres çubuğu boyutu değiştirince esnemeyi önle
     ctx.clearRect(0, 0, W, H);
     ctx.save();
     if (G.shakeT > 0) ctx.translate(rand(-6, 6), rand(-6, 6));
