@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Kara Tahta</title>
 <link rel="icon" type="image/svg+xml" href="../../shared/logo.svg?v=202610051251">
-<link rel="stylesheet" href="../../shared/egido.css?v=202610051252">
+<link rel="stylesheet" href="../../shared/egido.css?v=202610051258">
 <style>
   /* ---------- Öğretmen: soru listesi ---------- */
   .qs { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
@@ -38,6 +38,7 @@
     <div id="teacherBarHost"></div>
     <h1 data-i18n="penguen.title"></h1>
     <p class="sub" data-i18n="penguen.sub"></p>
+    <div class="row" style="margin:0 0 4px"><button class="btn secondary small" id="btnExample" data-i18n="setup.example"></button></div>
 
     <div class="cols three">
       <div>
@@ -58,7 +59,6 @@
     <div class="qs" id="qs"></div>
     <div class="addrow">
       <button class="btn secondary" id="btnAdd" data-i18n="penguen.add"></button>
-      <button class="btn secondary" id="btnExample" data-i18n="setup.example"></button>
     </div>
     <div class="cols" style="margin-top:6px">
       <div>
@@ -95,13 +95,13 @@
   <div id="countdown" class="hidden"></div>
 </div>
 
-<script src="../../shared/config.js?v=202610051252"></script>
+<script src="../../shared/config.js?v=202610051258"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="../../shared/i18n.js?v=202610051252"></script>
-<script src="../../shared/ui.js?v=202610051252"></script>
-<script src="../../shared/header.js?v=202610051252"></script>
-<script src="../../shared/egido.js?v=202610051252"></script>
+<script src="../../shared/i18n.js?v=202610051258"></script>
+<script src="../../shared/ui.js?v=202610051258"></script>
+<script src="../../shared/header.js?v=202610051258"></script>
+<script src="../../shared/egido.js?v=202610051258"></script>
 <script>
 (() => {
   'use strict';
@@ -178,7 +178,8 @@
   window.addEventListener('resize', () => { if (G.running) resize(); });
 
   const G = { cfg: null, running: false, order: [], idx: 0, score: 0, correct: 0, wrong: 0, missed: [], t0: 0, lives: 1,
-    phase: 'idle', pt: 0, cur: null, row: [], penguin: { x: 0, y: 0 }, jumpFrom: null, jumpTo: null, target: null, scrollDy: 0, waveT: 0, bubbles: [], timer: null, timeLeft: 0, sparkles: [] };
+    phase: 'idle', pt: 0, cur: null, row: [], penguin: { x: 0, y: 0 }, jumpFrom: null, jumpTo: null, target: null, scrollDy: 0, waveT: 0, bubbles: [], timer: null, timeLeft: 0, sparkles: [],
+    drops: [], ripples: [], shakeT: 0, flail: 0, under: 0 };
   const L = { curY: 0, rowY: 0, bw: 0, bh: 0, pz: 0 };
   function layout() {
     L.curY = H * .82; L.rowY = TOP + (H * .82 - TOP) * .38;
@@ -238,12 +239,27 @@
       G.scrollDy = dy * k;
       if (G.pt >= 1) finishScroll();
     } else if (G.phase === 'sink') {
-      G.pt = Math.min(1, G.pt + dt / 1.4);
-      G.target.tilt = G.pt * .6; G.target.sink = G.pt * L.bh * 2.2;
-      G.penguin.y = G.target.y - L.bh / 2 + G.target.sink + G.pt * L.pz * 1.3;
-      if (Math.random() < .5) G.bubbles.push({ x: G.penguin.x + rand(-20, 20), y: G.penguin.y, r: rand(3, 8), vy: rand(30, 70), life: 1 });
-      if (G.pt >= 1 && !G.sunk) { G.sunk = true; setTimeout(afterSink, 500); }
+      G.pt = Math.min(1, G.pt + dt / 2.0);
+      const b = G.target, pt = G.pt;
+      if (pt < .22) {                                   // 1) çatlaklar ilerler, hafif titreme
+        b.crack = pt / .22; b.shiver = Math.sin(pt * 90) * 2;
+        G.penguin.y = b.y - L.bh / 2 + b.shiver;
+      } else {
+        if (!b.broken) breakBlock(b);                   // 2) parçalanma anı: sıçrama, halka, ses, sarsıntı
+        const k = (pt - .22) / .78;
+        for (const sh of b.shards) { sh.rot += sh.vr * dt; sh.dy += (sh.vy + k * 160) * dt; sh.dx += sh.vx * dt; sh.alpha = Math.max(0, 1 - Math.max(0, k - .35) / .45); }
+        // penguen: önce kanat çırpıp hafif zıplar, sonra suya gömülür
+        G.flail = k < .35 ? Math.sin(k / .35 * Math.PI * 3) : 0;
+        const hop = k < .3 ? Math.sin(k / .3 * Math.PI) * L.pz * .35 : 0;
+        G.penguin.y = b.y - L.bh / 2 - hop + Math.max(0, k - .25) * L.pz * 2.4;
+        G.under = clamp((k - .4) / .4, 0, 1);
+        if (k > .3 && Math.random() < .6) G.bubbles.push({ x: G.penguin.x + rand(-18, 18), y: G.penguin.y - L.pz * .4, r: rand(2, 7), vy: rand(30, 80), life: 1 });
+      }
+      if (pt >= 1 && !G.sunk) { G.sunk = true; setTimeout(afterSink, 400); }
     }
+    for (let i = G.drops.length - 1; i >= 0; i--) { const d = G.drops[i]; d.vy += 700 * dt; d.x += d.vx * dt; d.y += d.vy * dt; d.life -= dt; if (d.life <= 0) G.drops.splice(i, 1); }
+    for (let i = G.ripples.length - 1; i >= 0; i--) { const r = G.ripples[i]; r.r += 90 * dt; r.life -= dt * .8; if (r.life <= 0) G.ripples.splice(i, 1); }
+    if (G.shakeT > 0) G.shakeT -= dt;
     for (let i = G.bubbles.length - 1; i >= 0; i--) { const b = G.bubbles[i]; b.y -= b.vy * dt; b.life -= dt * .8; if (b.life <= 0) G.bubbles.splice(i, 1); }
     for (let i = G.sparkles.length - 1; i >= 0; i--) { const s = G.sparkles[i]; s.life -= dt; s.y -= 40 * dt; if (s.life <= 0) G.sparkles.splice(i, 1); }
   }
@@ -266,10 +282,29 @@
       G.phase = 'scroll'; G.pt = 0;
     } else {
       G.wrong++; G.missed.push(cur().q); G.lives--; updateHud();
-      sfx.bad(); tone(200, .6, 'sine', .25, .1, 60);
-      G.phase = 'sink'; G.pt = 0; G.sunk = false;
+      tone(1400, .12, 'square', .12, 0, 900); // ilk çıtırtı
+      b.crack = 0; b.broken = false; b.shards = null;
+      G.phase = 'sink'; G.pt = 0; G.sunk = false; G.flail = 0; G.under = 0;
       const fb = $('#flashBad'); fb.classList.add('on'); setTimeout(() => fb.classList.remove('on'), 50);
     }
+  }
+  // Bloğu iki çatlakla üç parçaya böl; parçalar ayrı ayrı yan yatıp batar
+  function breakBlock(b) {
+    b.broken = true; b.shiver = 0;
+    const w = L.bw, h = L.bh;
+    const zig = (x0, x1) => [[-h / 2, x0], [-h * .15, x0 + rand(-w * .07, w * .07)], [h * .2, x1 + rand(-w * .07, w * .07)], [h / 2, x1]].map(([y, x]) => ({ x, y }));
+    const c1 = zig(-w * .18, -w * .1), c2 = zig(w * .22, w * .3);
+    const left = [{ x: -w / 2, y: -h / 2 }, ...c1, { x: -w / 2, y: h / 2 }];
+    const mid = [...c1, ...c2.slice().reverse()];
+    const right = [...c2, { x: w / 2, y: h / 2 }, { x: w / 2, y: -h / 2 }];
+    const mk = (poly, vr, vx, vy) => { const cx = poly.reduce((a, p) => a + p.x, 0) / poly.length, cy = poly.reduce((a, p) => a + p.y, 0) / poly.length;
+      return { poly: poly.map(p => ({ x: p.x - cx, y: p.y - cy })), cx, cy, dx: 0, dy: 0, rot: 0, vr, vx, vy, alpha: 1 }; };
+    b.shards = [mk(left, -1.1, -22, 40), mk(mid, .35, 0, 90), mk(right, 1.3, 26, 50)];
+    const wy = b.y + h * .25; // su çizgisi
+    for (let i = 0; i < 26; i++) { const a = rand(-Math.PI * .9, -Math.PI * .1); const sp = rand(120, 320); G.drops.push({ x: b.x + rand(-w / 2, w / 2), y: wy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: rand(2, 5), life: rand(.5, 1) }); }
+    G.ripples.push({ x: b.x, y: wy, r: w * .3, life: 1 }, { x: b.x, y: wy, r: w * .15, life: 1.3 });
+    G.shakeT = .45;
+    tone(90, .35, 'square', .3, 0, 40); tone(600, .08, 'sawtooth', .2, .02, 200); sfx.bad();
   }
   function finishScroll() {
     // hedef blok yeni "mevcut" blok olur, sahne sıfırlanır
@@ -283,7 +318,7 @@
   function afterSink() {
     if (!G.running) return;
     if (G.lives > 0) { // can varsa aynı soruyla penguen geri döner
-      G.phase = 'idle'; G.penguin = { x: G.cur.x, y: L.curY - L.bh / 2 }; G.target.sink = 0; G.target.tilt = 0; G.target.gone = true; G.bubbles = [];
+      G.phase = 'idle'; G.penguin = { x: G.cur.x, y: L.curY - L.bh / 2 }; G.target.gone = true; G.bubbles = []; G.drops = []; G.ripples = []; G.flail = 0; G.under = 0;
       startTimer(); return;
     }
     endGame('lose');
@@ -305,7 +340,8 @@
     const bob = isCur ? 0 : Math.sin(G.waveT * 1.6 + (b.bob || 0)) * 3;
     const w = isCur ? L.bw * 1.1 : L.bw, h = L.bh, x = b.x, y = b.y + (b.sink || 0) + bob + (isCur ? 0 : G.scrollDy);
     if (b.gone) return;
-    ctx.save(); ctx.translate(x, y); ctx.rotate(b.tilt || 0);
+    if (b.broken) { drawShards(b); return; }
+    ctx.save(); ctx.translate(x + (b.shiver || 0), y);
     if (b.fade && G.phase === 'scroll') ctx.globalAlpha = 1 - G.pt;
     // su altı gölgesi
     ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.beginPath(); ctx.ellipse(0, h * .55, w * .55, h * .35, 0, 0, Math.PI * 2); ctx.fill();
@@ -314,9 +350,27 @@
     const g = ctx.createLinearGradient(0, -h / 2, 0, h / 2); g.addColorStop(0, '#ffffff'); g.addColorStop(1, '#cfefff');
     ctx.fillStyle = g; roundRect(-w / 2, -h / 2, w, h * .7, 12); ctx.fill();
     ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 2; roundRect(-w / 2, -h / 2, w, h * .7, 12); ctx.stroke();
-    if (b.tilt) { ctx.strokeStyle = '#5aa9d6'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-w * .2, -h / 2); ctx.lineTo(-w * .05, -h * .1); ctx.lineTo(w * .15, -h / 2 + h * .7); ctx.stroke(); } // çatlak
+    if (b.crack > 0 && !b.broken) { // ilerleyen çatlaklar
+      ctx.strokeStyle = '#3d86b4'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+      const segs = [[-w * .18, -h / 2, -w * .12, -h * .15], [-w * .12, -h * .15, -w * .2, h * .2], [-w * .2, h * .2, -w * .1, h / 2], [w * .22, -h / 2, w * .3, -h * .1], [w * .3, -h * .1, w * .2, h * .25], [w * .2, h * .25, w * .3, h / 2], [-w * .12, -h * .15, w * .02, -h * .3]];
+      const n = Math.floor(b.crack * segs.length), frac = b.crack * segs.length - n;
+      ctx.beginPath();
+      segs.forEach((sg, i) => { if (i < n) { ctx.moveTo(sg[0], sg[1]); ctx.lineTo(sg[2], sg[3]); } else if (i === n) { ctx.moveTo(sg[0], sg[1]); ctx.lineTo(sg[0] + (sg[2] - sg[0]) * frac, sg[1] + (sg[3] - sg[1]) * frac); } });
+      ctx.stroke();
+    }
     if (b.text) { ctx.fillStyle = '#0b3d5c'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; fitText(b.text, 0, -h / 2 + h * .35, w - 20, Math.round(h * .5)); }
     ctx.restore();
+  }
+  function drawShards(b) {
+    const h = L.bh;
+    for (const sh of b.shards) {
+      if (sh.alpha <= 0) continue;
+      ctx.save(); ctx.globalAlpha = sh.alpha; ctx.translate(b.x + sh.cx + sh.dx, b.y + sh.cy + sh.dy); ctx.rotate(sh.rot);
+      ctx.beginPath(); sh.poly.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.closePath();
+      const g = ctx.createLinearGradient(0, -h / 2, 0, h / 2); g.addColorStop(0, '#ffffff'); g.addColorStop(.6, '#cfefff'); g.addColorStop(1, '#8fd3f4');
+      ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.restore();
+    }
   }
   function fitText(text, x, y, maxW, size) {
     ctx.font = `800 ${size}px "Segoe UI", system-ui, sans-serif`;
@@ -326,11 +380,13 @@
   function drawPenguin(px, py) {
     const s = L.pz, squash = G.phase === 'jump' ? 1 - Math.sin(G.pt * Math.PI) * .12 : 1;
     ctx.save(); ctx.translate(px, py); ctx.scale(1 / squash, squash);
+    if (G.under > 0) { ctx.globalAlpha = 1 - G.under * .85; ctx.rotate(G.under * .5); } // suya gömülürken yan yatar ve silikleşir
+    const wingUp = G.flail ? Math.abs(G.flail) * 1.2 : 0; // kanatlar yukarı çırpar
     ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(0, 2, s * .32, s * .08, 0, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#ff9f1c'; ctx.beginPath(); ctx.ellipse(-s * .14, -s * .02, s * .13, s * .06, -.3, 0, Math.PI * 2); ctx.ellipse(s * .14, -s * .02, s * .13, s * .06, .3, 0, Math.PI * 2); ctx.fill(); // ayaklar
     ctx.fillStyle = '#1b2631'; ctx.beginPath(); ctx.ellipse(0, -s * .45, s * .3, s * .42, 0, 0, Math.PI * 2); ctx.fill();   // gövde
     ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(0, -s * .38, s * .2, s * .3, 0, 0, Math.PI * 2); ctx.fill();         // karın
-    ctx.fillStyle = '#1b2631'; ctx.beginPath(); ctx.ellipse(-s * .3, -s * .45, s * .07, s * .22, .5, 0, Math.PI * 2); ctx.ellipse(s * .3, -s * .45, s * .07, s * .22, -.5, 0, Math.PI * 2); ctx.fill(); // kanatlar
+    ctx.fillStyle = '#1b2631'; ctx.beginPath(); ctx.ellipse(-s * .3, -s * .45 - wingUp * s * .15, s * .07, s * .22, .5 + wingUp, 0, Math.PI * 2); ctx.ellipse(s * .3, -s * .45 - wingUp * s * .15, s * .07, s * .22, -.5 - wingUp, 0, Math.PI * 2); ctx.fill(); // kanatlar
     ctx.beginPath(); ctx.arc(0, -s * .82, s * .2, 0, Math.PI * 2); ctx.fill();                                               // kafa
     ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-s * .07, -s * .85, s * .055, 0, Math.PI * 2); ctx.arc(s * .07, -s * .85, s * .055, 0, Math.PI * 2); ctx.fill(); // gözler
     ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(-s * .06, -s * .85, s * .025, 0, Math.PI * 2); ctx.arc(s * .08, -s * .85, s * .025, 0, Math.PI * 2); ctx.fill();
@@ -340,13 +396,18 @@
   function draw() {
     if (canvas.clientWidth !== W || canvas.clientHeight !== H) resize(); // ilk kare / döndürme
     ctx.clearRect(0, 0, W, H);
+    ctx.save();
+    if (G.shakeT > 0) ctx.translate(rand(-7, 7) * G.shakeT, rand(-7, 7) * G.shakeT);
     drawWater();
+    for (const r of G.ripples) { ctx.save(); ctx.globalAlpha = Math.max(0, r.life) * .7; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(r.x, r.y, r.r, r.r * .35, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
     for (const b of G.row) drawBlock(b, false);
     if (G.phase !== 'scroll' || G.pt < 1) { const c = Object.assign({}, G.cur, { y: G.cur.y + G.scrollDy }); if (G.phase === 'scroll') c.fade = true; drawBlock(c, true); }
     for (const s of G.sparkles) { ctx.save(); ctx.globalAlpha = Math.max(0, s.life); ctx.fillStyle = '#fff'; ctx.font = '20px serif'; ctx.textAlign = 'center'; ctx.fillText('✦', s.x, s.y + G.scrollDy); ctx.restore(); }
     const py = G.phase === 'scroll' ? G.penguin.y + G.scrollDy : G.penguin.y;
-    if (!(G.phase === 'sink' && G.pt >= 1)) drawPenguin(G.penguin.x, py);
+    if (!(G.phase === 'sink' && G.under >= 1)) drawPenguin(G.penguin.x, py);
     for (const b of G.bubbles) { ctx.save(); ctx.globalAlpha = Math.max(0, b.life); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
+    for (const d of G.drops) { ctx.save(); ctx.globalAlpha = Math.max(0, d.life); ctx.fillStyle = '#cfefff'; ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+    ctx.restore();
   }
 
   // ---------- Etkileşim ----------
