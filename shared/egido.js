@@ -41,6 +41,7 @@ window.Egido = (() => {
   let currentCode = '';         // kayıtlı oyunun kodu
   let playSetId = null;         // oynanan kayıtlı oyunun id'si (skora yazılır, son oynanma güncellenir)
   let isTeacher = true;
+  let preview = false;         // iframe içinde öğretmen denemesi: ad sorulmaz, skor kaydedilmez
   let cfg = null;               // oynanan ayarlar
   let player = { name: '', cls: '' };
   try { player = Object.assign(player, JSON.parse(localStorage.getItem('egido_player') || '{}')); } catch (e) {}
@@ -307,6 +308,37 @@ window.Egido = (() => {
   }
   function launch(c) { cfg = c; if (!playSetId && currentSetId) playSetId = currentSetId; show('game'); o.startGame(c); }
 
+  // ---------- Deneme bölmesi (öğretmen) ----------
+  let pvCfg = null;
+  function openPreview(c) {
+    pvCfg = c;
+    let pane = $('#previewPane');
+    if (!pane) {
+      pane = document.createElement('aside'); pane.id = 'previewPane';
+      pane.innerHTML = `<div class="pv-head"><span>${t('preview.title')}</span><span class="spacer"></span>
+        <button type="button" class="btn small secondary" id="pvRestart">${t('preview.restart')}</button>
+        <button type="button" class="btn small secondary" id="pvClose">✕</button></div><iframe title="preview"></iframe>`;
+      $('#setup').appendChild(pane);
+      $('#pvClose').onclick = closePreview;
+      $('#pvRestart').onclick = () => openPreview(readConfig());
+    }
+    document.body.classList.add('has-preview');
+    const fr = pane.querySelector('iframe');
+    fr.onload = () => fr.contentWindow.postMessage({ type: 'egido-preview', cfg: pvCfg }, location.origin);
+    fr.src = location.pathname + '?preview=1&_=' + Date.now();
+  }
+  function closePreview() { const pane = $('#previewPane'); if (pane) pane.remove(); document.body.classList.remove('has-preview'); }
+  function bootPreview() {
+    preview = true; isTeacher = false;
+    player = { name: t('preview.player'), cls: t('preview.cls') };
+    document.body.classList.add('in-preview');
+    window.addEventListener('message', ev => {
+      if (ev.origin !== location.origin || !ev.data || ev.data.type !== 'egido-preview') return;
+      try { writeConfig(ev.data.cfg); launch(readConfig()); } catch (e) { setErr(String(e)); }
+    });
+    show('game'); // ayarlar gelene kadar boş sahne
+  }
+
   // ---------- Bitiş ----------
   function finish(r) {
     $('#resEmoji').textContent = r.emoji || (r.kind === 'win' ? '🏆' : '🎯');
@@ -323,6 +355,7 @@ window.Egido = (() => {
   }
   async function saveAndShowRank(r) {
     $('#myRank').textContent = ''; $('#resLb').innerHTML = '';
+    if (preview) { $('#myRank').textContent = t('preview.noSave'); $('#btnChangePlayer').classList.add('hidden'); $('#btnSetup').classList.add('hidden'); return; }
     if (r.kind === 'quit') return;
     const entry = { name: player.name, cls: player.cls, score: r.score, correct: r.correct, total: r.total, wrong: r.wrong, time: r.time, result: r.kind, date: Date.now() };
     $('#myRank').textContent = t('res.saving');
@@ -391,7 +424,7 @@ window.Egido = (() => {
     $('#btnStart').onclick = () => {
       const c = readConfig(); const e = o.validate(c);
       if (e) { setErr(e); return; }
-      setErr(''); isTeacher = true; gotoIntro(c);
+      setErr(''); isTeacher = true; openPreview(c);
     };
     $('#btnLbSetup').onclick = () => {
       const c = readConfig(); const e = o.validate(c);
@@ -457,6 +490,8 @@ window.Egido = (() => {
     let fromLink = null;
     if (location.hash.length > 1) { try { fromLink = dec(location.hash.slice(1)); } catch (e) {} }
     const safeWrite = c => { try { writeConfig(c); return !o.validate(readConfig()); } catch (e) { return false; } };
+
+    if (params.get('preview') === '1' && window.parent !== window) { bootPreview(); return; }
 
     if (remote) {
       session = (await sb.auth.getSession()).data.session;

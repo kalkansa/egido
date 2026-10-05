@@ -135,6 +135,19 @@ body.has-topbar #setup { padding-top: 62px; }
 body.has-topbar #setup .card { max-height: calc(94vh - 62px); }
 @media (max-width: 720px) { .topbar { height: auto; flex-wrap: wrap; padding: 8px 12px; gap: 8px; } .user-btn span { display: none; } body.has-topbar #setup { padding-top: 110px; } }
 
+/* Deneme bölmesi: öğretmen paneli solda, oyun sağda bir iframe içinde */
+body.has-preview #setup { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; padding: 16px; }
+body.has-topbar.has-preview #setup { padding-top: 62px; }
+body.has-preview #setup .card { width: auto; max-height: calc(100vh - 32px); }
+body.has-topbar.has-preview #setup .card { max-height: calc(100vh - 78px); }
+#previewPane { position: sticky; top: 16px; height: calc(100vh - 32px); background: #0f2b5b; border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 25px 60px rgba(0,0,0,.35); }
+body.has-topbar #previewPane { top: 62px; height: calc(100vh - 78px); }
+.pv-head { display: flex; align-items: center; gap: 8px; padding: 8px 12px; color: #fff; background: rgba(0,0,0,.35); font-weight: 700; font-size: 14px; }
+.pv-head .spacer { flex: 1; }
+.pv-head .btn.small { box-shadow: 0 3px 0 #3f5675; }
+#previewPane iframe { flex: 1; border: 0; width: 100%; background: #0f2b5b; }
+@media (max-width: 960px) { body.has-preview #setup { grid-template-columns: 1fr; } #previewPane { position: fixed; inset: 0; z-index: 45; border-radius: 0; height: auto !important; top: 0 !important; } }
+
 /* Öğretmen çubuğu (oyun sayfasının üstü) */
 .tbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: #eef3fa; border-radius: 12px; padding: 10px 12px; margin: -6px 0 16px; font-size: 14px; }
 .tbar input { flex: 1; min-width: 160px; padding: 7px 10px; font-size: 14px; }
