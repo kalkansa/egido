@@ -118,12 +118,22 @@ textarea { min-height: 120px; resize: vertical; line-height: 1.45; }
 .topnav .menu-list a { display: block; color: var(--ink); opacity: 1; padding: 9px 12px; }
 .topnav .menu-list a:hover { background: #eef3fa; }
 .topbar .spacer { flex: 1; }
-.topbar .user { font-size: 14px; opacity: .9; white-space: nowrap; }
-.topbar .btn.logout { margin-left: 0; }
+.usermenu { position: relative; }
+.user-btn { font: inherit; font-size: 14px; font-weight: 600; color: #fff; background: rgba(255,255,255,.12); border: 0; border-radius: 9px; padding: 7px 12px; cursor: pointer; white-space: nowrap; }
+.user-btn:hover, .usermenu.open .user-btn { background: rgba(255,255,255,.22); }
+.user-list { position: absolute; right: 0; top: calc(100% + 6px); background: #fff; color: var(--ink); border-radius: 12px; box-shadow: 0 12px 34px rgba(0,0,0,.3); padding: 6px; display: none; min-width: 200px; z-index: 40; }
+.usermenu.open .user-list { display: block; }
+.user-list button { display: block; width: 100%; text-align: left; font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: none; border: 0; padding: 10px 12px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
+.user-list button:hover { background: #eef3fa; }
+.user-list button.danger { color: var(--bad); }
+.user-list button.danger:hover { background: #fdecea; }
+.dlg input[type=password] { width: 100%; font: inherit; font-size: 15px; padding: 10px 12px; border: 2px solid #d7deea; border-radius: 10px; outline: none; }
+.dlg input[type=password]:focus { border-color: var(--bg2); }
+.dlg label { margin-top: 10px; }
 .topbar .langsel-btn { padding: 4px 8px; }
 body.has-topbar #setup { padding-top: 62px; }
 body.has-topbar #setup .card { max-height: calc(94vh - 62px); }
-@media (max-width: 720px) { .topbar { height: auto; flex-wrap: wrap; padding: 8px 12px; gap: 8px; } .topbar .user { display: none; } body.has-topbar #setup { padding-top: 110px; } }
+@media (max-width: 720px) { .topbar { height: auto; flex-wrap: wrap; padding: 8px 12px; gap: 8px; } .user-btn span { display: none; } body.has-topbar #setup { padding-top: 110px; } }
 
 /* Öğretmen çubuğu (oyun sayfasının üstü) */
 .tbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: #eef3fa; border-radius: 12px; padding: 10px 12px; margin: -6px 0 16px; font-size: 14px; }
