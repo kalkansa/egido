@@ -11,4 +11,6 @@ window.BP_CONFIG = {
   // Öğretmen kullanıcı adlarına eklenen alan adı: "ayse" → ayse@egido.local
   // Supabase panelinde kullanıcıyı bu e-posta ile açın.
   userDomain: 'egido.local',
+  // Pixabay resim araması için ücretsiz API anahtarı (pixabay.com → hesap → API). Boşsa arama sekmesi uyarı gösterir.
+  pixabayKey: '57886437-af7d1a39670e4c257fe072ccc',
 };

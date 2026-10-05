@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Egido</title>
 <link rel="icon" type="image/svg+xml" href="../../shared/logo.svg">
-<link rel="stylesheet" href="../../shared/egido.css?v=202610042202">
+<link rel="stylesheet" href="../../shared/egido.css?v=202610051024">
 <style>
   /* ---------- Öğretmen: çift listesi (Harf Puzzle ile aynı düzen) ---------- */
   .items { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
@@ -66,7 +66,6 @@
       <button class="btn secondary" id="btnAdd" data-i18n="puzzle.add"></button>
       <button class="btn secondary" id="btnExample" data-i18n="setup.example"></button>
     </div>
-    <input type="file" id="file" accept="image/*" class="hidden">
 
     <div class="cols three">
       <div>
@@ -115,11 +114,12 @@
   <div id="countdown" class="hidden"></div>
 </div>
 
-<script src="../../shared/config.js?v=202610042202"></script>
+<script src="../../shared/config.js?v=202610051024"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="../../shared/i18n.js?v=202610042202"></script>
-<script src="../../shared/egido.js?v=202610042202"></script>
+<script src="../../shared/i18n.js?v=202610051024"></script>
+<script src="../../shared/egido.js?v=202610051024"></script>
+<script src="../../shared/imagepicker.js?v=202610051024"></script>
 <script>
 (() => {
   'use strict';
@@ -130,7 +130,6 @@
 
   // ---------- Öğretmen: çift listesi ----------
   let items = []; // [{ img, word }]
-  let fileTarget = -1;
   function thumbHtml(img) { if (!img) return '📷'; if (img.startsWith('emoji:')) return escapeHtml(img.slice(6)); return `<img src="${escapeHtml(img)}" alt="">`; }
   function renderItems() {
     const box = $('#items');
@@ -143,7 +142,7 @@
       </div>`).join('') || `<div class="hint">${t('puzzle.noItems')}</div>`;
     box.querySelectorAll('.item').forEach(row => {
       const i = +row.dataset.i;
-      row.querySelector('.thumb').onclick = () => { fileTarget = i; $('#file').value = ''; $('#file').click(); };
+      row.querySelector('.thumb').onclick = () => ImagePicker.open({ onPick: img => { items[i].img = img; renderItems(); } });
       row.querySelector('.word').oninput = e => { items[i].word = e.target.value; };
       row.querySelector('.imgsrc').onchange = e => {
         const v = e.target.value.trim();
@@ -155,19 +154,6 @@
   }
   document.addEventListener('egido:lang', renderItems);
   $('#btnAdd').onclick = () => { items.push({ img: '', word: '' }); renderItems(); const rows = document.querySelectorAll('.item .word'); if (rows.length) rows[rows.length - 1].focus(); };
-  $('#file').onchange = () => {
-    const f = $('#file').files[0]; if (!f || fileTarget < 0) return;
-    const url = URL.createObjectURL(f), im = new Image();
-    im.onload = () => {
-      const MAX = 420, sc = Math.min(1, MAX / Math.max(im.width, im.height));
-      const c = document.createElement('canvas'); c.width = Math.round(im.width * sc); c.height = Math.round(im.height * sc);
-      const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(im, 0, 0, c.width, c.height);
-      items[fileTarget].img = c.toDataURL('image/jpeg', .82);
-      URL.revokeObjectURL(url); renderItems();
-    };
-    im.onerror = () => { Egido.toast(t('puzzle.imgFail')); URL.revokeObjectURL(url); };
-    im.src = url;
-  };
   $('#btnExample').onclick = () => writeConfig({ items: t('puzzle.ex').split('|').map(p => { const [e, w] = p.split(':'); return { img: 'emoji:' + e, word: w }; }), per: 5, time: 60, lives: 3 });
 
   function readConfig() {

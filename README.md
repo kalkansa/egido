@@ -60,7 +60,13 @@ Supabase panelinde **Authentication → Users → Add user → Create new user**
 
 Alan adını değiştirmek isterseniz `shared/config.js` içindeki `userDomain` değerini değiştirin.
 
-### 3. GitHub Pages
+### 3. Pixabay (resim arama, isteğe bağlı)
+
+Harf Puzzle ve Kablo Eşleştirme'de resim seçici "Pixabay'de Ara" sekmesi içerir. Çalışması için ücretsiz anahtar:
+[pixabay.com](https://pixabay.com) → hesap aç → [API sayfası](https://pixabay.com/api/docs/) → anahtarı kopyala → `shared/config.js` içine `pixabayKey` olarak yaz.
+Arama arayüz dilinde yapılır, güvenli arama açıktır; seçilen resim küçültülüp oyuna gömülür (Pixabay kalıcı hotlink istemez).
+
+### 4. GitHub Pages
 
 Depo **public** olmalı (ücretsiz planda Pages yalnızca public depolarda çalışır).
 **Settings → Pages → Build and deployment**: Deploy from a branch, **main**, **/ (root)**.
