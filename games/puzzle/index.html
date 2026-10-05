@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Kara Tahta</title>
 <link rel="icon" type="image/svg+xml" href="../../shared/logo.svg?v=202610051251">
-<link rel="stylesheet" href="../../shared/egido.css?v=202610051258">
+<link rel="stylesheet" href="../../shared/egido.css?v=202610051259">
 <style>
   /* ---------- Öğretmen: soru listesi ---------- */
   .items { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
@@ -118,14 +118,14 @@
   <div id="countdown" class="hidden"></div>
 </div>
 
-<script src="../../shared/config.js?v=202610051258"></script>
+<script src="../../shared/config.js?v=202610051259"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="../../shared/i18n.js?v=202610051258"></script>
-<script src="../../shared/ui.js?v=202610051258"></script>
-<script src="../../shared/header.js?v=202610051258"></script>
-<script src="../../shared/egido.js?v=202610051258"></script>
-<script src="../../shared/imagepicker.js?v=202610051258"></script>
+<script src="../../shared/i18n.js?v=202610051259"></script>
+<script src="../../shared/ui.js?v=202610051259"></script>
+<script src="../../shared/header.js?v=202610051259"></script>
+<script src="../../shared/egido.js?v=202610051259"></script>
+<script src="../../shared/imagepicker.js?v=202610051259"></script>
 <script>
 (() => {
   'use strict';
@@ -190,6 +190,7 @@
 
   function startGame(cfg) {
     G.cfg = cfg;
+    document.body.classList.add('playing');
     Object.assign(G, { running: true, idx: 0, score: 0, correct: 0, wrong: 0, missed: [], t0: performance.now(), locked: false });
     G.order = cfg.items.map((_, i) => i); if (cfg.order === 'random') G.order = shuffle(G.order);
     const p = Egido.player; $('#hudPlayer').textContent = '👤 ' + p.name + (p.cls ? ' · ' + p.cls : '');
@@ -288,6 +289,7 @@
 
   function endGame(kind) {
     G.running = false; stopTimer();
+    document.body.classList.remove('playing');
     const total = G.order.length, time = (performance.now() - G.t0) / 1000;
     const r = { kind: kind || (G.correct === total ? 'win' : 'lose'), score: G.score, correct: G.correct, total, wrong: G.wrong, time, missed: G.missed, missedTitle: t('puzzle.missed') };
     if (kind === 'quit') { r.emoji = '🚪'; }

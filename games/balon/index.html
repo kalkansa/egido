@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Kara Tahta</title>
 <link rel="icon" type="image/svg+xml" href="../../shared/logo.svg?v=202610051251">
-<link rel="stylesheet" href="../../shared/egido.css?v=202610051258">
+<link rel="stylesheet" href="../../shared/egido.css?v=202610051259">
 <style>
   .ta-ok { border-color: #bfe9cf; } .ta-ok:focus { border-color: var(--ok); }
   .ta-bad { border-color: #f5c6c1; } .ta-bad:focus { border-color: var(--bad); }
@@ -95,13 +95,13 @@
   </div>
 </div>
 
-<script src="../../shared/config.js?v=202610051258"></script>
+<script src="../../shared/config.js?v=202610051259"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="../../shared/i18n.js?v=202610051258"></script>
-<script src="../../shared/ui.js?v=202610051258"></script>
-<script src="../../shared/header.js?v=202610051258"></script>
-<script src="../../shared/egido.js?v=202610051258"></script>
+<script src="../../shared/i18n.js?v=202610051259"></script>
+<script src="../../shared/ui.js?v=202610051259"></script>
+<script src="../../shared/header.js?v=202610051259"></script>
+<script src="../../shared/egido.js?v=202610051259"></script>
 <script>
 (() => {
   'use strict';
@@ -204,6 +204,7 @@
 
   function startGame(cfg) {
     G.cfg = cfg;
+    document.body.classList.add('playing');
     Object.assign(G, { running: true, paused: false, balloons: [], particles: [], floaters: [], score: 0, lives: cfg.lives || Infinity,
       remaining: new Set(cfg.correct), onScreen: new Set(), popsGood: 0, popsBad: 0, combo: 0, elapsed: 0, timeLeft: cfg.duration || Infinity,
       spawnT: 0, shakeT: 0, nextColor: Math.floor(Math.random() * PALETTE.length) });
@@ -346,6 +347,7 @@
   // ---------- Bitiş ----------
   function endGame(kind) {
     G.running = false; cancelAnimationFrame(G.raf);
+    document.body.classList.remove('playing');
     $('#pauseOverlay').classList.add('hidden');
     const total = G.cfg.correct.length, got = total - G.remaining.size;
     const r = { kind, score: G.score, correct: got, total, wrong: G.popsBad, time: G.elapsed, missed: [...G.remaining], missedTitle: t('balon.missed') };
