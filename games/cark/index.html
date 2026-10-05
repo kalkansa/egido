@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Kara Tahta</title>
 <link rel="icon" type="image/svg+xml" href="../../shared/logo.svg?v=202610051644">
-<link rel="stylesheet" href="../../shared/egido.css?v=202610051644">
+<link rel="stylesheet" href="../../shared/egido.css?v=202610051652">
 <style>
   /* ---------- Öğretmen: kategoriler ve sorular ---------- */
   .cats { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
@@ -115,13 +115,13 @@
   <div id="countdown" class="hidden"></div>
 </div>
 
-<script src="../../shared/config.js?v=202610051644"></script>
+<script src="../../shared/config.js?v=202610051652"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="../../shared/i18n.js?v=202610051644"></script>
-<script src="../../shared/ui.js?v=202610051644"></script>
-<script src="../../shared/header.js?v=202610051644"></script>
-<script src="../../shared/egido.js?v=202610051644"></script>
+<script src="../../shared/i18n.js?v=202610051652"></script>
+<script src="../../shared/ui.js?v=202610051652"></script>
+<script src="../../shared/header.js?v=202610051652"></script>
+<script src="../../shared/egido.js?v=202610051652"></script>
 <script>
 (() => {
   'use strict';
@@ -195,12 +195,13 @@
   // ---------- Oyun ----------
   const canvas = $('#wheel'), ctx = canvas.getContext('2d');
   const G = { cfg: null, running: false, score: 0, correct: 0, wrong: 0, missed: [], t0: 0, lives: Infinity, total: 0, asked: 0,
-    angle: 0, omega: 0, spinning: false, lastSeg: -1, pools: [], segs: [], timer: null, timeLeft: 0, drag: null, raf: 0, last: 0, size: 300, locked: false, catIdx: -1, curQ: null };
+    angle: 0, omega: 0, spinning: false, lastSeg: -1, pools: [], segs: [], active: [], timer: null, timeLeft: 0, drag: null, raf: 0, last: 0, size: 300, locked: false, catIdx: -1, curQ: null, qNo: 0 };
 
   function startGame(cfg) {
     G.cfg = cfg;
     Object.assign(G, { running: true, score: 0, correct: 0, wrong: 0, missed: [], t0: performance.now(), lives: cfg.lives || Infinity, asked: 0, angle: -Math.PI / 2 / 2, omega: 0, spinning: false, lastSeg: -1, locked: false, curQ: null });
     G.segs = cfg.cats.map((c, i) => ({ name: c.name, color: PALETTE[i % PALETTE.length] }));
+    G.active = cfg.cats.map((_, i) => i); // çarkta kalan kategoriler
     G.pools = cfg.cats.map(c => shuffle(c.qs.map((_, j) => j)));
     G.total = cfg.cats.reduce((a, c) => a + c.qs.length, 0);
     document.body.classList.add('playing');
@@ -242,7 +243,7 @@
     draw();
     G.raf = requestAnimationFrame(loop);
   }
-  const segAngle = () => Math.PI * 2 / G.segs.length;
+  const segAngle = () => Math.PI * 2 / Math.max(1, G.active.length);
   function segAtPointer() { // üstteki ok (-90°) hangi dilimde
     const a = ((-Math.PI / 2 - G.angle) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
     return Math.floor(a / segAngle());
@@ -267,21 +268,31 @@
   canvas.addEventListener('pointerup', endDrag); canvas.addEventListener('pointercancel', endDrag);
 
   function onStop(seg) {
-    G.catIdx = seg;
-    if (!G.pools[seg].length) { // kategori bitti: tekrar çevir
-      $('#spinHint').textContent = t('cark.exhausted', { c: G.segs[seg].name }); tone(300, .2, 'sine', .15);
-      setTimeout(() => { if (G.running) spin(); }, 1100); return;
-    }
+    G.catIdx = G.active[seg]; G.qNo = 0;
     tone(880, .15, 'triangle', .2); tone(1320, .25, 'triangle', .2, .12);
     setTimeout(askQuestion, 500);
+  }
+  // Kategorinin soruları bitince dilim çarktan çıkar; kalanlar çarkı doldurur
+  function retireCategory() {
+    const ci = G.catIdx;
+    G.active = G.active.filter(x => x !== ci);
+    if (!G.active.length) return false;
+    $('#spinHint').textContent = t('cark.catDone', { c: G.segs[ci].name });
+    tone(660, .12, 'triangle', .15); tone(990, .2, 'triangle', .15, .1);
+    if (G.active.length === 1) { // son kategori: çevirmeye gerek yok
+      G.catIdx = G.active[0]; G.qNo = 0; G.locked = true;
+      setTimeout(() => { if (!G.running) return; $('#spinHint').textContent = t('cark.lastCat', { c: G.segs[G.catIdx].name }); setTimeout(askQuestion, 900); }, 900);
+    }
+    return true;
   }
 
   // ---------- Soru ----------
   function askQuestion() {
     if (!G.running) return;
     const ci = G.catIdx, qi = G.pools[ci].pop(), q = G.cfg.cats[ci].qs[qi];
-    G.curQ = q; G.locked = true;
-    $('#qcat').textContent = G.segs[ci].name; $('#qcat').style.background = G.segs[ci].color;
+    G.curQ = q; G.locked = true; G.qNo++;
+    const total = G.cfg.cats[ci].qs.length;
+    $('#qcat').textContent = G.segs[ci].name + (total > 1 ? ` · ${t('cark.qOf', { i: G.qNo, n: total })}` : ''); $('#qcat').style.background = G.segs[ci].color;
     $('#qtext').textContent = q.q; $('#qfb').textContent = ''; $('#qfb').className = 'qfb';
     const opts = shuffle([q.a, ...q.w]);
     $('#choices').innerHTML = opts.map(o => `<button class="choice" data-w="${escapeHtml(o)}">${escapeHtml(o)}</button>`).join('');
@@ -306,10 +317,13 @@
     updateHud();
     setTimeout(() => {
       if (!G.running) return;
-      $('#qpanel').classList.add('hidden'); G.locked = false;
+      $('#qpanel').classList.add('hidden');
       if (G.cfg.lives && G.lives <= 0) return endGame('lose');
       if (G.asked >= G.total) return endGame(G.wrong === 0 ? 'win' : 'done');
-      $('#spinHint').textContent = t('cark.spinHint');
+      if (G.pools[G.catIdx].length) { setTimeout(askQuestion, 400); return; } // aynı kategorinin sonraki sorusu
+      G.locked = false;
+      if (!retireCategory()) return endGame(G.wrong === 0 ? 'win' : 'done');
+      if (G.active.length > 1) $('#spinHint').textContent = t('cark.spinHint') + ' · ' + $('#spinHint').textContent;
     }, ok ? 1300 : 2400);
   }
   function startTimer() {
@@ -329,11 +343,11 @@
   function draw() {
     const s = G.size, c = s / 2, R = c - 14;
     ctx.clearRect(0, 0, s, s);
-    const n = G.segs.length, sa = segAngle();
-    for (let i = 0; i < n; i++) {
-      const a0 = G.angle + i * sa, a1 = a0 + sa, done = !G.pools[i] || !G.pools[i].length;
+    const n = G.active.length, sa = segAngle();
+    for (let k = 0; k < n; k++) {
+      const i = G.active[k], a0 = G.angle + k * sa, a1 = a0 + sa, done = false;
       ctx.beginPath(); ctx.moveTo(c, c); ctx.arc(c, c, R, a0, a1); ctx.closePath();
-      ctx.fillStyle = done ? '#9aa3ad' : G.segs[i].color; ctx.fill();
+      ctx.fillStyle = G.segs[i].color; ctx.fill();
       ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 3; ctx.stroke();
       // kategori adı: dilim boyunca
       ctx.save(); ctx.translate(c, c); ctx.rotate(a0 + sa / 2); ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
