@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Kara Tahta</title>
 <link rel="icon" type="image/svg+xml" href="../../shared/logo.svg?v=202610051251">
-<link rel="stylesheet" href="../../shared/egido.css?v=202610051259">
+<link rel="stylesheet" href="../../shared/egido.css?v=202610051302">
 <style>
   .ta-ok { border-color: #bfe9cf; } .ta-ok:focus { border-color: var(--ok); }
   .ta-bad { border-color: #f5c6c1; } .ta-bad:focus { border-color: var(--bad); }
@@ -95,13 +95,13 @@
   </div>
 </div>
 
-<script src="../../shared/config.js?v=202610051259"></script>
+<script src="../../shared/config.js?v=202610051302"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="../../shared/i18n.js?v=202610051259"></script>
-<script src="../../shared/ui.js?v=202610051259"></script>
-<script src="../../shared/header.js?v=202610051259"></script>
-<script src="../../shared/egido.js?v=202610051259"></script>
+<script src="../../shared/i18n.js?v=202610051302"></script>
+<script src="../../shared/ui.js?v=202610051302"></script>
+<script src="../../shared/header.js?v=202610051302"></script>
+<script src="../../shared/egido.js?v=202610051302"></script>
 <script>
 (() => {
   'use strict';
@@ -352,7 +352,7 @@
     ctx.fillStyle = '#f5cba7'; ctx.beginPath(); ctx.arc(0, -h * .88, h * .14, 0, Math.PI * 2); ctx.fill(); // kafa
     ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = h * .11; ctx.lineCap = 'round'; ctx.beginPath();        // kollar açık
     ctx.moveTo(-h * .2, -h * .65); ctx.lineTo(-h * .55 - lean * 20, -h * .9); ctx.moveTo(h * .2, -h * .65); ctx.lineTo(h * .55 - lean * 20, -h * .9); ctx.stroke();
-    ctx.fillStyle = '#27ae60'; ctx.beginPath(); ctx.arc(-h * .55 - lean * 20, -h * .9, h * .09, 0, Math.PI * 2); ctx.arc(h * .55 - lean * 20, -h * .9, h * .09, 0, Math.PI * 2); ctx.fill(); // eldiven
+    ctx.fillStyle = '#1f3a93'; ctx.beginPath(); ctx.arc(-h * .55 - lean * 20, -h * .9, h * .1, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.arc(h * .55 - lean * 20, -h * .9, h * .1, 0, Math.PI * 2); ctx.fill(); // lacivert eldivenler
     ctx.restore();
   }
   function drawPlayer() {
@@ -371,14 +371,26 @@
   }
   function drawBall(x, y, r, rot) {
     ctx.save(); ctx.translate(x, y);
-    ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(2, r * .95, r * .9, r * .28, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(2, r * .95, r * .9, r * .28, 0, 0, Math.PI * 2); ctx.fill(); // gölge
     ctx.rotate(rot);
-    const g = ctx.createRadialGradient(-r * .3, -r * .3, r * .1, 0, 0, r); g.addColorStop(0, '#fff'); g.addColorStop(1, '#cfd6dc');
+    // küre: beyaz deri, kenarda gölge
+    const g = ctx.createRadialGradient(-r * .35, -r * .35, r * .1, 0, 0, r); g.addColorStop(0, '#ffffff'); g.addColorStop(.75, '#f1f3f5'); g.addColorStop(1, '#b9c2cc');
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#1b2631';
-    for (let i = 0; i < 5; i++) { const a = i * Math.PI * 2 / 5; ctx.beginPath(); ctx.arc(Math.cos(a) * r * .55, Math.sin(a) * r * .55, r * .2, 0, Math.PI * 2); ctx.fill(); }
-    ctx.beginPath(); ctx.arc(0, 0, r * .17, 0, Math.PI * 2); ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.clip();
+    const pent = (cx, cy, pr, a0) => { ctx.beginPath(); for (let i = 0; i < 5; i++) { const a = a0 + i * Math.PI * 2 / 5; const px = cx + Math.cos(a) * pr, py = cy + Math.sin(a) * pr; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.closePath(); };
+    ctx.fillStyle = '#1b2631'; ctx.strokeStyle = 'rgba(27,38,49,.55)'; ctx.lineWidth = Math.max(1, r * .06); ctx.lineJoin = 'round';
+    pent(0, 0, r * .36, -Math.PI / 2); ctx.fill();                                   // ortadaki siyah beşgen
+    for (let i = 0; i < 5; i++) {                                                     // etraftaki beşgenler (kenarda perspektifle basık)
+      const a = -Math.PI / 2 + i * Math.PI * 2 / 5 + Math.PI / 5, d = r * .82;
+      ctx.save(); ctx.translate(Math.cos(a) * d, Math.sin(a) * d); ctx.rotate(a + Math.PI / 2); ctx.scale(1, .55);
+      pent(0, 0, r * .36, -Math.PI / 2); ctx.fill(); ctx.restore();
+      // dikişler: orta beşgenin köşesinden dış beşgene
+      const v = -Math.PI / 2 + i * Math.PI * 2 / 5;
+      ctx.beginPath(); ctx.moveTo(Math.cos(v) * r * .36, Math.sin(v) * r * .36); ctx.lineTo(Math.cos(v) * r * .72, Math.sin(v) * r * .72); ctx.stroke();
+    }
+    ctx.restore();
     ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 0, r - .75, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.ellipse(-r * .35, -r * .4, r * .22, r * .12, -.6, 0, Math.PI * 2); ctx.fill(); // parlama
     ctx.restore();
   }
   function drawLabel(x, y, text, w) {
