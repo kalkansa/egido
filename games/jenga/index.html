@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Kara Tahta</title>
+<link rel="icon" type="image/svg+xml" href="../../shared/logo.svg?v=202610061601">
+<link rel="stylesheet" href="../../shared/egido.css?v=202610061601">
+<style>
+  /* ---------- Öğretmen: soru listesi ---------- */
+  .qs { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+  .qitem { background: #f1f5fb; border-radius: 12px; padding: 10px 12px; display: grid; gap: 8px; }
+  .qitem .top { display: flex; gap: 8px; align-items: center; }
+  .qitem .no { font-weight: 800; color: var(--muted); width: 26px; text-align: center; }
+  .qitem .top input { flex: 1; margin: 0; }
+  .qitem .rm { background: none; border: 0; color: var(--bad); font-size: 20px; cursor: pointer; padding: 4px 8px; }
+  .qitem .answers { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  @media (max-width: 720px) { .qitem .answers { grid-template-columns: 1fr 1fr; } }
+  .qitem .answers input { margin: 0; font-size: 14px; }
+  .qitem .a-ok { border-color: #bfe9cf; background: #f4fff7; } .qitem .a-ok:focus { border-color: var(--ok); }
+  .qitem .a-bad { border-color: #f5c6c1; } .qitem .a-bad:focus { border-color: var(--bad); }
+  .addrow { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+
+  /* ---------- Oyun ---------- */
+  body.playing { background: linear-gradient(180deg, #1b2240 0%, #3a3457 48%, #5b4134 100%); }
+  canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: pointer; }
+  .qbar { position: absolute; top: 58px; left: 0; right: 0; padding: 6px 18px; text-align: center; pointer-events: none; z-index: 2; }
+  .qbar div { display: inline-block; max-width: min(1100px, 96%); background: rgba(0,0,0,.38); backdrop-filter: blur(4px); color: #fff; border-radius: 16px; padding: 10px 22px; font-weight: 800; font-size: clamp(20px, 3.2vw, 34px); line-height: 1.25; text-shadow: 0 2px 6px rgba(0,0,0,.4); }
+  .flashBad { position: fixed; inset: 0; pointer-events: none; z-index: 3; box-shadow: inset 0 0 160px rgba(70,20,10,0); transition: box-shadow .6s; }
+  .flashBad.on { box-shadow: inset 0 0 240px rgba(70,20,10,.95); transition: none; }
+</style>
+</head>
+<body>
+
+<!-- ===================== ÖĞRETMEN KURULUM ===================== -->
+<div id="setup" class="screen">
+  <div class="card">
+    <div id="teacherBarHost"></div>
+    <h1 data-i18n="jenga.title"></h1>
+    <p class="sub" data-i18n="jenga.sub"></p>
+    <div class="row" style="margin:0 0 4px"><button class="btn secondary small" id="btnExample" data-i18n="setup.example"></button></div>
+
+    <div class="cols three">
+      <div>
+        <label for="lives" data-i18n="balon.lives"></label>
+        <select id="lives"><option value="1" selected data-i18n="jenga.lives1"></option><option value="3" data-i18n="jenga.lives3"></option></select>
+      </div>
+      <div>
+        <label for="time" data-i18n="puzzle.time"></label>
+        <select id="time"><option value="0" selected data-i18n="puzzle.noTime"></option><option value="15">15 s</option><option value="30">30 s</option><option value="45">45 s</option></select>
+      </div>
+      <div>
+        <label for="order" data-i18n="puzzle.order"></label>
+        <select id="order"><option value="fixed" selected data-i18n="puzzle.fixed"></option><option value="random" data-i18n="puzzle.random"></option></select>
+      </div>
+    </div>
+
+    <label data-i18n="jenga.items"></label>
+    <div class="qs" id="qs"></div>
+    <div class="addrow">
+      <button class="btn secondary" id="btnAdd" data-i18n="jenga.add"></button>
+    </div>
+    <p class="hint" data-i18n="jenga.help"></p>
+
+    <div class="err" id="setupErr"></div>
+    <div class="row">
+      <button class="btn" id="btnStart" data-i18n="setup.try"></button>
+      <button class="btn" id="btnShare" data-i18n="setup.code"></button>
+      <button class="btn secondary" id="btnLbSetup" data-i18n="setup.lb"></button>
+    </div>
+    <div id="sharePanelHost"></div>
+  </div>
+</div>
+
+<!-- ===================== OYUN ===================== -->
+<div id="game" class="screen hidden">
+  <div class="hud">
+    <div class="pill" id="hudPlayer">👤</div>
+    <div class="pill progress" id="hudScore">⭐ 0</div>
+    <div class="q"></div>
+    <div class="pill progress" id="hudProg">🧱 1/1</div>
+    <div class="pill progress" id="hudFloors">🗼</div>
+    <div class="pill lives" id="hudLives">❤</div>
+    <div class="pill progress" id="hudTime">⏱ 30</div>
+    <div class="pill pauseBtn" id="btnQuit">✕</div>
+  </div>
+  <div class="qbar"><div id="hudQ"></div></div>
+  <canvas id="c"></canvas>
+  <div class="flashBad" id="flashBad"></div>
+  <div id="countdown" class="hidden"></div>
+</div>
+
+<script src="../../shared/config.js?v=202610061601"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="../../shared/i18n.js?v=202610061601"></script>
+<script src="../../shared/ui.js?v=202610061601"></script>
+<script src="../../shared/header.js?v=202610061601"></script>
+<script src="../../shared/egido.js?v=202610061601"></script>
+<script>
+(() => {
+  'use strict';
+  const $ = s => document.querySelector(s);
+  const t = I18N.t;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const ease = x => 1 - Math.pow(1 - x, 3);
+  const { sfx, tone, escapeHtml, shuffle } = Egido;
+  const NW = 3; // her soruda 3 yanlış + 1 doğru = 4 tahta
+
+  // ---------- Öğretmen ----------
+  let qs = []; // [{ q, a, w: ['', '', ''] }]
+  function renderQs() {
+    const box = $('#qs');
+    box.innerHTML = qs.map((it, i) => `
+      <div class="qitem" data-i="${i}">
+        <div class="top"><span class="no">${i + 1}</span><input type="text" class="q" placeholder="${t('jenga.qPh')}" maxlength="160" value="${escapeHtml(it.q)}"><button class="rm" title="${t('puzzle.remove')}">✕</button></div>
+        <div class="answers">
+          <input type="text" class="a a-ok" placeholder="${t('jenga.aPh')}" maxlength="40" value="${escapeHtml(it.a)}">
+          ${[0, 1, 2].map(k => `<input type="text" class="w a-bad" data-k="${k}" placeholder="${t('jenga.wPh', { n: k + 1 })}" maxlength="40" value="${escapeHtml(it.w[k] || '')}">`).join('')}
+        </div>
+      </div>`).join('') || `<div class="hint">${t('jenga.noItems')}</div>`;
+    box.querySelectorAll('.qitem').forEach(row => {
+      const i = +row.dataset.i;
+      row.querySelector('.q').oninput = e => { qs[i].q = e.target.value; };
+      row.querySelector('.a').oninput = e => { qs[i].a = e.target.value; };
+      row.querySelectorAll('.w').forEach(inp => inp.oninput = e => { qs[i].w[+inp.dataset.k] = e.target.value; });
+      row.querySelector('.rm').onclick = () => { qs.splice(i, 1); renderQs(); };
+    });
+  }
+  document.addEventListener('egido:lang', renderQs);
+  $('#btnAdd').onclick = () => { qs.push({ q: '', a: '', w: ['', '', ''] }); renderQs(); const rows = document.querySelectorAll('.qitem .q'); if (rows.length) rows[rows.length - 1].focus(); };
+  $('#btnExample').onclick = () => writeConfig({ items: t('jenga.ex').split('|').map(s => { const p = s.split(';'); return { q: p[0], a: p[1], w: p.slice(2) }; }), lives: 1, time: 0, order: 'fixed' });
+
+  function readConfig() {
+    return { items: qs.map(it => ({ q: it.q.trim(), a: it.a.trim(), w: it.w.slice(0, NW).map(x => (x || '').trim()) })).filter(it => it.q || it.a || it.w.some(Boolean)),
+      lives: +$('#lives').value, time: +$('#time').value, order: $('#order').value };
+  }
+  function writeConfig(c) {
+    $('#lives').value = c.lives || 1; $('#time').value = c.time != null ? c.time : 0; $('#order').value = c.order || 'fixed';
+    qs = (c.items || []).map(it => ({ q: it.q || '', a: it.a || '', w: [...(it.w || []), '', '', ''].slice(0, 3) }));
+    renderQs();
+  }
+  function validate(c) {
+    if (!Array.isArray(c.items) || !c.items.length) return t('jenga.errEmpty');
+    for (let i = 0; i < c.items.length; i++) {
+      const it = c.items[i];
+      if (!it.q || !it.a || !Array.isArray(it.w) || it.w.length < NW || it.w.slice(0, NW).some(x => !x)) return t('jenga.errFields', { n: i + 1 });
+      const low = it.w.map(x => x.toLocaleLowerCase());
+      if (low.includes(it.a.toLocaleLowerCase()) || new Set(low).size !== low.length) return t('jenga.errDup', { n: i + 1 });
+    }
+    return '';
+  }
+
+  // ---------- Sahne ----------
+  // Kule koordinatları: orijin masanın üstünde, kulenin tabanının ortası. y yukarı doğru eksi.
+  const canvas = $('#c'), ctx = canvas.getContext('2d');
+  let W = 0, H = 0, DPR = 1, TOP = 120;
+  const L = { TW: 300, LH: 60, BW: 100, OX: 18, OY: -13, baseX: 0, baseY: 0 };
+  function resize() {
+    if (!canvas.clientWidth || !canvas.clientHeight) return; // gizli/ölçüsüz tuvalle yerleşim yapma
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = canvas.clientWidth; H = canvas.clientHeight;
+    canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    const qb = $('#hudQ').getBoundingClientRect(); TOP = Math.max(100, qb.bottom + 10);
+    layout();
+    if (G.layers.length) { G.scaleT = fitScale(G.layers.length); if (G.phase === 'idle') G.scale = G.scaleT; }
+  }
+  window.addEventListener('resize', () => { if (G.running) { resize(); draw(); } });
+  function layout() {
+    L.baseY = H - clamp(H * .13, 64, 120); L.baseX = W / 2;
+    const avail = L.baseY - TOP - 30;
+    L.LH = Math.max(26, Math.min(clamp(W * .5, 280, 560) * .2, avail / 13.6));
+    L.TW = L.LH * 5; L.BW = L.TW / 3; L.OX = L.LH * .3; L.OY = -L.LH * .22;
+  }
+  function fitScale(n) { const h = n * L.LH + L.LH * 2.4, avail = L.baseY - TOP - 12; return Math.min(1, avail / h); }
+
+  const G = { cfg: null, running: false, order: [], idx: 0, score: 0, correct: 0, wrong: 0, missed: [], t0: 0, lives: 1,
+    phase: 'idle', pt: 0, tm: 0, layers: [], cands: [], pulled: null, target: null, from: null, bodies: [], dust: [], sparkles: [],
+    sway: 0, lean: 1, shakeT: 0, scale: 1, scaleT: 1, maxFloors: 0, timer: null, timeLeft: 0, ended: false };
+  const cur = () => G.cfg.items[G.order[G.idx]];
+
+  // Kule: katlar aşağıdan yukarıya. 'long' kat = önden tek uzun yüz (arkasında n blok), 'end' kat = 3 kısa yüz (slots).
+  const STABLE = [[1, 1, 1], [1, 1, 1], [0, 1, 1], [1, 1, 0], [1, 0, 1], [0, 1, 0]];
+  function makeTower() {
+    const layers = [];
+    for (let j = 0; j < 11; j++) {
+      if (j % 2 === 0) layers.push({ kind: 'long', n: j <= 7 && Math.random() < .3 ? 2 : 3, seed: Math.random() });
+      else layers.push({ kind: 'end', slots: (j <= 8 ? STABLE[Math.floor(rand(0, STABLE.length))] : [1, 1, 1]).map(Boolean), seeds: [Math.random(), Math.random(), Math.random()] });
+    }
+    return layers;
+  }
+  function blockRect(j, slot) {
+    const y = -(j + 1) * L.LH;
+    return slot < 0 ? { x: -L.TW / 2, y, w: L.TW, h: L.LH } : { x: -L.TW / 2 + slot * L.BW, y, w: L.BW, h: L.LH };
+  }
+  // Çekilebilir tahtalar: üstteki iki kat hariç; uzun katta en az 2 blok kalmalı, kısa katta kalanlar dengede durmalı
+  function eligible() {
+    const top = G.layers.length - 1, out = { long: [], end: [] };
+    for (let j = 0; j <= top - 2; j++) {
+      const ly = G.layers[j];
+      if (ly.kind === 'long') { if (ly.n >= 2) out.long.push({ j, slot: -1 }); }
+      else ly.slots.forEach((p, i) => { if (!p) return; const rem = ly.slots.map((q, k) => q && k !== i); if (rem[1] || rem.filter(Boolean).length >= 2) out.end.push({ j, slot: i }); });
+    }
+    return out;
+  }
+  const candAt = (j, slot) => G.cands.find(c => c.j === j && c.slot === slot);
+
+  function startGame(cfg) {
+    G.cfg = cfg;
+    Object.assign(G, { running: true, idx: 0, score: 0, correct: 0, wrong: 0, missed: [], t0: performance.now(), lives: cfg.lives || 1, phase: 'idle', pt: 0, tm: 0,
+      cands: [], pulled: null, target: null, bodies: [], dust: [], sparkles: [], sway: 0, shakeT: 0, scale: 1, scaleT: 1, ended: false });
+    G.order = cfg.items.map((_, i) => i); if (cfg.order === 'random') G.order = shuffle(G.order);
+    G.layers = makeTower(); G.maxFloors = G.layers.length; PILE.h.clear();
+    document.body.classList.add('playing');
+    const p = Egido.player; $('#hudPlayer').textContent = '👤 ' + p.name + (p.cls ? ' · ' + p.cls : '');
+    $('#hudTime').classList.toggle('hidden', !cfg.time);
+    $('#hudLives').classList.toggle('hidden', (cfg.lives || 1) <= 1);
+    resize(); G.scaleT = fitScale(G.layers.length); G.scale = G.scaleT;
+    setQuestion(true); draw();
+    Egido.countdown(3, () => { startTimer(); G.last = performance.now(); G.raf = requestAnimationFrame(loop); }, () => G.running);
+  }
+  function setQuestion(noTimer) {
+    const q = cur();
+    $('#hudQ').textContent = q.q;
+    let e = eligible(), picks = shuffle(e.long).slice(0, 4);
+    if (picks.length < 4) picks = picks.concat(shuffle(e.end).slice(0, 4 - picks.length));
+    if (picks.length < 4) { // kule çok delindi: yeniden kur
+      G.layers = makeTower(); G.scaleT = fitScale(G.layers.length); e = eligible();
+      picks = shuffle(e.long).concat(shuffle(e.end)).slice(0, 4);
+      EgidoUI.toast(t('jenga.rebuilt'));
+    }
+    const answers = shuffle([{ text: q.a, ok: true }, ...q.w.slice(0, NW).map(x => ({ text: x, ok: false }))]);
+    G.cands = picks.map((p, i) => ({ j: p.j, slot: p.slot, text: answers[i].text, ok: answers[i].ok, pulse: rand(0, 6.28) }));
+    G.phase = 'idle'; updateHud(); if (!noTimer) startTimer();
+  }
+  function updateHud() {
+    $('#hudScore').textContent = '⭐ ' + G.score;
+    $('#hudProg').textContent = `🧱 ${G.idx + 1}/${G.order.length}`;
+    $('#hudFloors').textContent = '🗼 ' + t('jenga.floors', { n: G.layers.length });
+    if ((G.cfg.lives || 1) > 1) $('#hudLives').textContent = '❤'.repeat(Math.max(0, G.lives)) + '🖤'.repeat(Math.max(0, G.cfg.lives - G.lives));
+  }
+
+  // ---------- Çekme / yerleştirme ----------
+  function pull(c) {
+    if (G.phase !== 'idle') return;
+    stopTimer();
+    const r = blockRect(c.j, c.slot), ly = G.layers[c.j];
+    const seed = c.slot < 0 ? ly.seed : ly.seeds[c.slot];
+    if (c.slot < 0) ly.n--; else ly.slots[c.slot] = false;
+    G.pulled = { x: r.x, y: r.y, w: r.w, h: r.h, cw: r.w, dx: 0, dy: 0, sc: 1, rot: 0, text: c.text, ok: c.ok, seed };
+    G.cands = G.cands.filter(x => x !== c);
+    G.phase = 'pull'; G.pt = 0;
+    tone(260, .18, 'triangle', .12, 0, 420);
+  }
+  // Tepeye konacak yer (kuleyi değiştirmeden hesaplar)
+  function placeTarget() {
+    const top = G.layers[G.layers.length - 1];
+    let j = G.layers.length - 1, kind = top.kind, slot = -1;
+    const full = top.kind === 'long' ? top.n >= 3 : top.slots.every(Boolean);
+    if (full) { j++; kind = top.kind === 'long' ? 'end' : 'long'; }
+    if (kind === 'end') { const base = full ? [false, false, false] : top.slots; slot = [0, 2, 1].find(i => !base[i]); }
+    return { j, slot, rect: blockRect(j, slot) };
+  }
+  function placeApply(tg) {
+    if (tg.j >= G.layers.length) G.layers.push(tg.slot < 0 ? { kind: 'long', n: 0, seed: G.pulled.seed } : { kind: 'end', slots: [false, false, false], seeds: [Math.random(), Math.random(), Math.random()] });
+    const ly = G.layers[tg.j];
+    if (tg.slot < 0) { ly.n++; ly.seed = G.pulled.seed; } else { ly.slots[tg.slot] = true; ly.seeds[tg.slot] = G.pulled.seed; }
+    G.maxFloors = Math.max(G.maxFloors, G.layers.length);
+  }
+  function beginWrong() {
+    G.wrong++; G.missed.push(cur().q); G.lives--; updateHud();
+    G.lean = Math.random() < .5 ? -1 : 1;
+    const p = G.pulled; // çekilen tahta masaya düşer
+    G.bodies.push({ cx: p.x + p.dx + p.w / 2, cy: p.y + p.h / 2, w: p.w, h: p.h, rot: 0, vx: 300 + rand(0, 80), vy: -120, vr: 4, seed: p.seed, text: p.text, rest: false });
+    G.pulled = null;
+    G.phase = 'wobble'; G.pt = 0; G.shakeT = .3; sfx.bad();
+    const fb = $('#flashBad'); fb.classList.add('on'); setTimeout(() => fb.classList.remove('on'), 50);
+  }
+  function collapse() {
+    G.phase = 'collapse'; G.pt = 0;
+    const sway = G.sway, cs = Math.cos(sway), sn = Math.sin(sway);
+    const push = (r, seed, text, k) => {
+      const cx0 = r.x + r.w / 2 + k * 3, cy0 = r.y + r.h / 2 - k * 2, hgt = -cy0 / L.LH;
+      G.bodies.push({ cx: cx0 * cs - cy0 * sn, cy: cx0 * sn + cy0 * cs, w: r.w, h: r.h, rot: sway, seed, text, rest: false,
+        vx: G.lean * (50 + hgt * 26) + rand(-80, 80), vy: rand(-170, 10) - hgt * 10, vr: rand(-5, 5) + G.lean * hgt * .35 });
+    };
+    G.layers.forEach((ly, j) => {
+      if (ly.kind === 'long') { for (let d = 0; d < ly.n; d++) { const c = candAt(j, -1); push(blockRect(j, -1), ly.seed, d === 0 && c ? c.text : '', d); } }
+      else ly.slots.forEach((p, i) => { if (!p) return; const c = candAt(j, i); push(blockRect(j, i), ly.seeds[i], c ? c.text : '', 0); });
+    });
+    G.layers = []; G.cands = []; G.sway = 0; G.shakeT = .9;
+    for (let i = 0; i < 9; i++) tone(rand(70, 200), .2, 'square', .16, i * .08, 40);
+    tone(60, .7, 'sawtooth', .3, .05, 25);
+  }
+
+  // ---------- Döngü ----------
+  function loop(now) {
+    if (!G.running) return;
+    const dt = Math.min(.05, (now - G.last) / 1000); G.last = now;
+    update(dt); if (!G.running) return;
+    draw(); G.raf = requestAnimationFrame(loop);
+  }
+  function update(dt) {
+    G.tm += dt;
+    G.scale += (G.scaleT - G.scale) * Math.min(1, dt * 5);
+    const p = G.pulled;
+    if (G.phase === 'pull') {
+      G.pt = Math.min(1, G.pt + dt / .45); const k = ease(G.pt);
+      p.dx = k * (p.w + L.OX * 2.4); p.sc = 1 + k * .08;
+      if (G.pt >= 1) {
+        if (p.ok) {
+          G.target = placeTarget(); G.from = { x: p.x + p.dx, y: p.y + p.dy };
+          G.scaleT = fitScale(G.layers.length + (G.target.j >= G.layers.length ? 1 : 0));
+          G.phase = 'lift'; G.pt = 0; tone(420, .25, 'triangle', .1, 0, 760);
+        } else beginWrong();
+      }
+    } else if (G.phase === 'lift') {
+      G.pt = Math.min(1, G.pt + dt / .7); const k = ease(G.pt), tr = G.target.rect;
+      p.dx = G.from.x + (tr.x - G.from.x) * k - p.x;
+      p.dy = G.from.y + (tr.y - G.from.y) * k - p.y - Math.sin(G.pt * Math.PI) * L.LH * 2.2;
+      p.cw = p.w + (tr.w - p.w) * k; p.sc = 1 + .08 * (1 - G.pt); p.rot = Math.sin(G.pt * Math.PI) * .1;
+      if (G.pt >= 1) {
+        placeApply(G.target);
+        const bonus = G.cfg.time ? Math.round(Math.max(0, G.timeLeft) / G.cfg.time * 5) : 0;
+        G.score += 10 + bonus; G.correct++; updateHud(); sfx.good();
+        for (let i = 0; i < 10; i++) G.sparkles.push({ x: tr.x + rand(0, tr.w), y: tr.y - rand(0, 30), life: rand(.5, 1) });
+        G.pulled = null; G.phase = 'settle'; G.pt = 0;
+      }
+    } else if (G.phase === 'settle') {
+      G.pt += dt / .4;
+      if (G.pt >= 1) { G.idx++; if (G.idx >= G.order.length) return endGame('win'); setQuestion(); }
+    } else if (G.phase === 'wobble') {
+      G.pt = Math.min(1, G.pt + dt / .9);
+      const strong = G.lives <= 0;
+      G.sway = Math.sin(G.pt * 26) * .028 * Math.min(1, G.pt * 3) * (1 - G.pt * .3) + G.lean * G.pt * G.pt * (strong ? .11 : .03);
+      if (G.pt >= 1) { if (!strong) { G.phase = 'recover'; G.pt = 0; } else collapse(); }
+    } else if (G.phase === 'recover') {
+      G.pt = Math.min(1, G.pt + dt / .6); G.sway *= 1 - Math.min(1, dt * 6);
+      if (G.pt >= 1) { G.sway = 0; G.phase = 'idle'; startTimer(); }
+    } else if (G.phase === 'collapse') {
+      G.pt += dt;
+      if (G.pt > 2.8 && !G.ended) { G.ended = true; endGame('lose'); return; }
+    }
+    for (const b of G.bodies) bodyStep(b, dt);
+    for (let i = G.dust.length - 1; i >= 0; i--) { const d = G.dust[i]; d.x += d.vx * dt; d.y += d.vy * dt; d.vy -= 20 * dt; d.r += 18 * dt; d.life -= dt; if (d.life <= 0) G.dust.splice(i, 1); }
+    for (let i = G.sparkles.length - 1; i >= 0; i--) { const s = G.sparkles[i]; s.life -= dt; s.y -= 40 * dt; if (s.life <= 0) G.sparkles.splice(i, 1); }
+    if (G.shakeT > 0) G.shakeT -= dt;
+  }
+  // Masadaki yığın: x aralıklarına göre yükseklik haritası; düşen tahtalar üst üste birikir
+  const PILE = { bin: 22, h: new Map() };
+  const bins = (cx, w) => { const a = Math.floor((cx - w / 2 + 2) / PILE.bin), b = Math.floor((cx + w / 2 - 2) / PILE.bin), out = []; for (let i = a; i <= b; i++) out.push(i); return out; };
+  const floorAt = (cx, w) => bins(cx, w).reduce((m, i) => Math.max(m, PILE.h.get(i) || 0), 0);
+  // Düşen tahta: yerçekimi, yığına/masaya çarpıp sekme, yatay sürtünme, düz yatana kadar dönme
+  function bodyStep(b, dt) {
+    if (b.rest) return;
+    b.vy += 2400 * dt; b.cx += b.vx * dt; b.cy += b.vy * dt; b.rot += b.vr * dt;
+    const half = () => (Math.abs(Math.cos(b.rot)) * b.h + Math.abs(Math.sin(b.rot)) * b.w) / 2;
+    const fl = -floorAt(b.cx, b.w);
+    if (b.cy + half() > fl) {
+      if (b.vy > 140) { puffDust(b.cx, fl, Math.min(6, Math.round(b.vy / 90))); if (Math.random() < .5) tone(rand(70, 170), .07, 'square', .08, 0, 40); }
+      b.vy = Math.abs(b.vy) > 110 ? -b.vy * .28 : 0; b.vx *= .72; b.vr *= .5;
+      if (b.vy === 0) {
+        const tg = Math.round(b.rot / Math.PI) * Math.PI; b.rot += (tg - b.rot) * .35; b.vr = 0; // düz yat
+        if (Math.abs(b.vx) < 12 && Math.abs(tg - b.rot) < .02) { b.rot = tg; b.vx = 0; b.rest = true; const top = floorAt(b.cx, b.w) + b.h; bins(b.cx, b.w).forEach(i => PILE.h.set(i, top)); }
+      }
+      b.cy = fl - half();
+    }
+    const lim = W / 2 / G.scale - 6;
+    if (b.cx - b.w / 2 < -lim) { b.cx = -lim + b.w / 2; b.vx = Math.abs(b.vx) * .5; } else if (b.cx + b.w / 2 > lim) { b.cx = lim - b.w / 2; b.vx = -Math.abs(b.vx) * .5; }
+  }
+  function puffDust(x, y, n) { for (let i = 0; i < n; i++) G.dust.push({ x: x + rand(-20, 20), y, vx: rand(-90, 90), vy: rand(-70, -10), r: rand(4, 9), life: rand(.4, .8) }); }
+
+  // ---------- Çizim ----------
+  const woodHue = seed => 28 + seed * 10;
+  function drawBlockFace(x, y, w, h, o) {
+    ctx.save();
+    if ((o.sc && o.sc !== 1) || o.rot) { ctx.translate(x + w / 2, y + h / 2); ctx.scale(o.sc || 1, o.sc || 1); ctx.rotate(o.rot || 0); ctx.translate(-(x + w / 2), -(y + h / 2)); }
+    const hue = woodHue(o.seed || 0), depth = o.depth || 0;
+    const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, `hsl(${hue} 62% 68%)`); g.addColorStop(1, `hsl(${hue} 58% 50%)`);
+    if (depth > 0) { // önü çekilmiş uzun kat: arkadaki bloğun gölgeli yüzü + alt kattan görünen çıkıntı
+      ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = `rgba(20,8,0,${.3 + depth * .15})`; ctx.fillRect(x, y, w, h);
+      const sh = ctx.createLinearGradient(0, y, 0, y + h * .55); sh.addColorStop(0, 'rgba(0,0,0,.5)'); sh.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = sh; ctx.fillRect(x, y, w, h * .55);
+      ctx.fillStyle = `hsl(${hue} 60% 72%)`; ctx.fillRect(x, y + h + L.OY * .7, w, -L.OY * .7);
+      ctx.fillStyle = `hsl(${hue} 55% 40%)`; ctx.beginPath(); ctx.moveTo(x + w, y); ctx.lineTo(x + w + L.OX, y + L.OY); ctx.lineTo(x + w + L.OX, y + h + L.OY); ctx.lineTo(x + w, y + h); ctx.closePath(); ctx.fill();
+    } else {
+      if (!o.flat) {
+        const d = o.topDepth == null ? 1 : o.topDepth;
+        if (d > 0) { ctx.fillStyle = `hsl(${hue} 62% 78%)`; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + L.OX * d, y + L.OY * d); ctx.lineTo(x + w + L.OX * d, y + L.OY * d); ctx.lineTo(x + w, y); ctx.closePath(); ctx.fill(); ctx.strokeStyle = 'rgba(90,50,15,.6)'; ctx.lineWidth = 1; ctx.stroke(); }
+        ctx.fillStyle = `hsl(${hue} 55% 42%)`; ctx.beginPath(); ctx.moveTo(x + w, y); ctx.lineTo(x + w + L.OX, y + L.OY); ctx.lineTo(x + w + L.OX, y + h + L.OY); ctx.lineTo(x + w, y + h); ctx.closePath(); ctx.fill(); ctx.strokeStyle = 'rgba(90,50,15,.6)'; ctx.stroke();
+      }
+      ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+      // damarlar
+      ctx.strokeStyle = 'rgba(110,60,15,.28)'; ctx.lineWidth = 1.2; ctx.beginPath();
+      for (let k = 0; k < 3; k++) { const f = ((o.seed || 0) * 7.3 + k * 1.37) % 1, yy = y + h * (.12 + f * .76); ctx.moveTo(x + 3, yy); for (let xx = x + 3; xx <= x + w - 3; xx += 12) ctx.lineTo(xx, yy + Math.sin(xx / 23 + f * 9) * h * .04); }
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(80,42,10,.85)'; ctx.lineWidth = 1.5; ctx.strokeRect(x + .75, y + .75, w - 1.5, h - 1.5);
+    }
+    if (o.hl) { // parlayan aday tahta
+      const a = .55 + .45 * Math.sin(G.tm * 5 + (o.pulse || 0));
+      ctx.save(); ctx.shadowColor = 'rgba(255,205,70,.95)'; ctx.shadowBlur = 8 + 10 * a; ctx.strokeStyle = `rgba(255,220,100,${.6 + .4 * a})`; ctx.lineWidth = 3; ctx.strokeRect(x + 2, y + 2, w - 4, h - 4); ctx.restore();
+      ctx.fillStyle = `rgba(255,235,170,${.12 + .1 * a})`; ctx.fillRect(x + 2, y + 2, w - 4, h - 4);
+    }
+    if (o.text) { ctx.fillStyle = depth > 0 ? '#f6e7cc' : '#2b1a08'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; fitText(o.text, x + w / 2, y + h / 2 + 1, w - 14, Math.round(h * .46)); }
+    ctx.restore();
+  }
+  function fitText(text, x, y, maxW, size) {
+    ctx.font = `800 ${size}px "Segoe UI", system-ui, sans-serif`;
+    while (ctx.measureText(text).width > maxW && size > 10) { size--; ctx.font = `800 ${size}px "Segoe UI", system-ui, sans-serif`; }
+    ctx.fillText(text, x, y);
+  }
+  function drawLayer(ly, j) {
+    const isTop = j === G.layers.length - 1;
+    if (ly.kind === 'long') {
+      if (ly.n <= 0) return;
+      const r = blockRect(j, -1), c = candAt(j, -1);
+      drawBlockFace(r.x, r.y, r.w, r.h, { seed: ly.seed, depth: isTop ? 0 : 3 - ly.n, topDepth: isTop ? ly.n / 3 : 1, text: c && c.text, hl: !!c, pulse: c && c.pulse });
+    } else {
+      for (let i = 0; i < 3; i++) {
+        if (!ly.slots[i]) continue;
+        const r = blockRect(j, i), c = candAt(j, i);
+        drawBlockFace(r.x, r.y, r.w, r.h, { seed: ly.seeds[i], text: c && c.text, hl: !!c, pulse: c && c.pulse });
+      }
+    }
+  }
+  function drawTable() {
+    const y = L.baseY;
+    const g = ctx.createLinearGradient(0, y, 0, H); g.addColorStop(0, '#a4703d'); g.addColorStop(.07, '#7d4f27'); g.addColorStop(1, '#452a12');
+    ctx.fillStyle = g; ctx.fillRect(0, y, W, H - y);
+    ctx.fillStyle = 'rgba(255,230,190,.4)'; ctx.fillRect(0, y, W, 3);
+    ctx.strokeStyle = 'rgba(0,0,0,.16)'; ctx.lineWidth = 1.5; ctx.beginPath();
+    for (let i = 1; i < 5; i++) { const yy = y + (H - y) * i / 5; ctx.moveTo(0, yy); ctx.lineTo(W, yy); }
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(L.baseX + 12 * G.scale, y + 5, L.TW * .64 * G.scale, L.LH * .34 * G.scale, 0, 0, Math.PI * 2); ctx.fill();
+  }
+  function draw() {
+    if (canvas.clientWidth !== W || canvas.clientHeight !== H) resize(); // ilk kare / döndürme
+    ctx.clearRect(0, 0, W, H);
+    ctx.save();
+    if (G.shakeT > 0) ctx.translate(rand(-9, 9) * G.shakeT, rand(-9, 9) * G.shakeT);
+    drawTable();
+    ctx.translate(L.baseX, L.baseY); ctx.scale(G.scale, G.scale);
+    ctx.save(); ctx.rotate(G.sway);
+    G.layers.forEach((ly, j) => drawLayer(ly, j));
+    ctx.restore();
+    if (G.pulled) { const p = G.pulled; drawBlockFace(p.x + p.dx, p.y + p.dy, p.cw, p.h, { seed: p.seed, text: p.text, hl: true, sc: p.sc, rot: p.rot, topDepth: .6 }); }
+    for (const b of G.bodies) { ctx.save(); ctx.translate(b.cx, b.cy); ctx.rotate(b.rot); drawBlockFace(-b.w / 2, -b.h / 2, b.w, b.h, { seed: b.seed, text: b.text, flat: true }); ctx.restore(); }
+    for (const d of G.dust) { ctx.save(); ctx.globalAlpha = Math.max(0, d.life) * .55; ctx.fillStyle = '#e6c9a0'; ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+    for (const s of G.sparkles) { ctx.save(); ctx.globalAlpha = Math.max(0, s.life); ctx.fillStyle = '#fff'; ctx.font = '20px serif'; ctx.textAlign = 'center'; ctx.fillText('✦', s.x, s.y); ctx.restore(); }
+    ctx.restore();
+  }
+
+  // ---------- Etkileşim ----------
+  canvas.addEventListener('pointerdown', e => {
+    if (!G.running || G.phase !== 'idle') return;
+    const r = canvas.getBoundingClientRect();
+    const tx = (e.clientX - r.left - L.baseX) / G.scale, ty = (e.clientY - r.top - L.baseY) / G.scale;
+    const c = G.cands.find(c => { const b = blockRect(c.j, c.slot); return tx >= b.x - 6 && tx <= b.x + b.w + 6 && ty >= b.y - 4 && ty <= b.y + b.h + 4; });
+    if (c) pull(c);
+  });
+  function startTimer() {
+    stopTimer(); if (!G.cfg.time) return;
+    G.timeLeft = G.cfg.time; $('#hudTime').textContent = '⏱ ' + G.timeLeft; $('#hudTime').style.color = '';
+    let last = performance.now();
+    G.timer = setInterval(() => {
+      const now = performance.now(); G.timeLeft -= (now - last) / 1000; last = now;
+      const s = Math.max(0, Math.ceil(G.timeLeft)); $('#hudTime').textContent = '⏱ ' + s; $('#hudTime').style.color = s <= 5 ? '#ffd1cc' : '';
+      if (G.timeLeft <= 0 && G.phase === 'idle') { stopTimer(); pull(G.cands.find(x => !x.ok) || G.cands[0]); } // süre dolunca yanlış tahta çekilmiş sayılır
+    }, 100);
+  }
+  function stopTimer() { if (G.timer) { clearInterval(G.timer); G.timer = null; } }
+  $('#btnQuit').onclick = async () => { if (G.running && await EgidoUI.confirm(t('puzzle.quitConfirm'))) endGame('quit'); };
+  document.addEventListener('visibilitychange', () => { if (document.hidden && G.running) stopTimer(); });
+
+  function endGame(kind) {
+    G.running = false; stopTimer(); cancelAnimationFrame(G.raf);
+    document.body.classList.remove('playing');
+    const total = G.order.length, time = (performance.now() - G.t0) / 1000, h = G.maxFloors;
+    if (kind === 'lose') for (let i = G.idx + 1; i < total; i++) G.missed.push(G.cfg.items[G.order[i]].q); // sorulamayan sorular
+    const r = { kind, score: G.score, correct: G.correct, total, wrong: G.wrong, time, missed: [...new Set(G.missed)], missedTitle: t('jenga.missed') };
+    if (kind === 'win') { r.emoji = G.wrong === 0 ? '🏆' : '🗼'; r.title = G.wrong === 0 ? t('jenga.perfect') : t('res.won'); r.msg = G.wrong === 0 ? t('jenga.perfectMsg', { h }) : t('jenga.overMsg', { t: total, c: G.correct, h }); sfx.win(); }
+    else if (kind === 'lose') { r.emoji = '💥'; r.title = t('jenga.crash'); r.msg = t('jenga.overMsg', { t: total, c: G.correct, h }); sfx.lose(); }
+    else { r.emoji = '🚪'; }
+    Egido.finish(r);
+  }
+
+  renderQs();
+  Egido.init({
+    gameId: 'jenga', emoji: '🗼',
+    introRules: () => t('jenga.rules'),
+    readConfig, writeConfig, validate,
+    summary: c => t('jenga.summary', { n: (c.items || []).length }),
+    startGame,
+  });
+})();
+</script>
+</body>
+</html>
