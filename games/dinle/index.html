@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Kara Tahta</title>
-<link rel="icon" type="image/svg+xml" href="../../shared/logo.svg?v=202610061948">
-<link rel="stylesheet" href="../../shared/egido.css?v=202610061948">
+<link rel="icon" type="image/svg+xml" href="../../shared/logo.svg?v=202610061958">
+<link rel="stylesheet" href="../../shared/egido.css?v=202610061958">
 <style>
   /* ---------- Öğretmen ---------- */
   .items { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
@@ -151,14 +151,14 @@
   <div id="countdown" class="hidden"></div>
 </div>
 
-<script src="../../shared/config.js?v=202610061948"></script>
+<script src="../../shared/config.js?v=202610061958"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="../../shared/i18n.js?v=202610061948"></script>
-<script src="../../shared/ui.js?v=202610061948"></script>
-<script src="../../shared/header.js?v=202610061948"></script>
-<script src="../../shared/egido.js?v=202610061948"></script>
-<script src="../../shared/imagepicker.js?v=202610061948"></script>
+<script src="../../shared/i18n.js?v=202610061958"></script>
+<script src="../../shared/ui.js?v=202610061958"></script>
+<script src="../../shared/header.js?v=202610061958"></script>
+<script src="../../shared/egido.js?v=202610061958"></script>
+<script src="../../shared/imagepicker.js?v=202610061958"></script>
 <script>
 (() => {
   'use strict';
@@ -177,10 +177,30 @@
     voiceFor(l) {
       if (!this.voices.length) this.load(); // Safari voiceschanged olayını her zaman göndermiyor
       const loc = (LOCALE[l] || 'en-US').toLowerCase(), want = loc.slice(0, 2), norm = v => (v.lang || '').toLowerCase().replace('_', '-');
-      const vs = this.voices.filter(v => norm(v).startsWith(want)), exact = vs.filter(v => norm(v) === loc), pool = exact.length ? exact : vs;
-      // cihazdaki (yerel) sesler önce: Chrome'un çevrim içi Google sesleri kelimeyi yarıda kesebiliyor, hiç okumayabiliyor
-      const local = pool.filter(v => v.localService);
-      return local.find(v => /natural|neural|premium|enhanced/i.test(v.name)) || local[0] || pool.find(v => /google|natural|neural|premium/i.test(v.name)) || pool[0] || null;
+      let best = null, bestScore = -Infinity;
+      for (const v of this.voices) {
+        if (!norm(v).startsWith(want)) continue;
+        const s = this.score(v, loc, norm);
+        if (s > bestScore) { best = v; bestScore = s; }
+      }
+      return best;
+    },
+    // iOS/macOS listesinde eğlence sesleri (Albert, Bad News, Zarvox…), Eloquence (Eddy, Flo, Grandma…) ve eski MacinTalk
+    // sesleri (Fred, Junior…) de var; kelimeyi bozuk okuyorlar. Bunları ele, en kaliteli sesi seç.
+    BAD: /^(albert|bad news|bahh|bells|boing|bubbles|cellos|good news|jester|organ|pipe organ|superstar|trinoids|whisper|wobble|zarvox|deranged|hysterical|princess|eddy|flo|grandma|grandpa|reed|rocko|sandy|shelley|fred|junior|kathy|ralph|agnes|bruce|vicki|victoria)\b/i,
+    score(v, loc, norm) {
+      const n = v.name || '', id = n + ' ' + (v.voiceURI || '');
+      let s = 0;
+      if (this.BAD.test(n) || /speech\.synthesis\.voice|eloquence/i.test(v.voiceURI || '')) s -= 100;
+      if (norm(v) === loc) s += 20;                                  // tam dil (en-US) önce
+      if (/premium/i.test(id)) s += 12;
+      else if (/enhanced|siri/i.test(id)) s += 10;
+      else if (/natural|neural/i.test(n)) s += 9;                    // Edge/Windows doğal sesler
+      if (v.localService) s += 4;                                    // cihaz sesi: Chrome'un çevrim içi sesleri kelimeyi kesebiliyor
+      else if (/google/i.test(n)) s += 3;
+      if (v.default) s += 2;
+      if (/samantha|alex|ava|allison|susan|tom|nicky|zoe|evan|aaron|daniel|karen|moira|yelda|cem|anna|helena|markus|monica|paulina|jorge|google/i.test(n)) s += 1;
+      return s;
     },
     // Kelimeler büyük harfle saklanıyor; "CAT", "EV" gibi büyük harfli kelimeleri motorlar kısaltma sanıp harf harf okuyor
     text(w, l) { return String(w || '').toLocaleLowerCase(LOCALE[l] || 'en'); },
