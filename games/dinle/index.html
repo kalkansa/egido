@@ -172,20 +172,48 @@
 
   // ---------- Sesli okuma (Web Speech API) ----------
   const TTS = {
-    ok: 'speechSynthesis' in window, voices: [],
-    load() { if (!this.ok) return; this.voices = speechSynthesis.getVoices(); },
-    voiceFor(l) { const want = (LOCALE[l] || 'en').slice(0, 2); const vs = this.voices.filter(v => v.lang.toLowerCase().startsWith(want)); return vs.find(v => /google|natural|neural|premium/i.test(v.name)) || vs[0] || null; },
+    ok: 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window, voices: [], seq: 0, keep: null, guard: null, unlocked: false,
+    load() { if (!this.ok) return; try { this.voices = speechSynthesis.getVoices() || []; } catch (e) { this.voices = []; } },
+    voiceFor(l) {
+      if (!this.voices.length) this.load(); // Safari voiceschanged olayını her zaman göndermiyor
+      const loc = (LOCALE[l] || 'en-US').toLowerCase(), want = loc.slice(0, 2), norm = v => (v.lang || '').toLowerCase().replace('_', '-');
+      const vs = this.voices.filter(v => norm(v).startsWith(want)), exact = vs.filter(v => norm(v) === loc), pool = exact.length ? exact : vs;
+      // cihazdaki (yerel) sesler önce: Chrome'un çevrim içi Google sesleri kelimeyi yarıda kesebiliyor, hiç okumayabiliyor
+      const local = pool.filter(v => v.localService);
+      return local.find(v => /natural|neural|premium|enhanced/i.test(v.name)) || local[0] || pool.find(v => /google|natural|neural|premium/i.test(v.name)) || pool[0] || null;
+    },
+    // Kelimeler büyük harfle saklanıyor; "CAT", "EV" gibi büyük harfli kelimeleri motorlar kısaltma sanıp harf harf okuyor
+    text(w, l) { return String(w || '').toLocaleLowerCase(LOCALE[l] || 'en'); },
+    // iOS/Safari: ilk konuşma bir dokunuşun içinde başlamazsa sonrakiler sessiz kalıyor; oyun başlarken sessizce aç
+    unlock() {
+      if (!this.ok || this.unlocked) return; this.unlocked = true;
+      try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch (e) {}
+    },
+    stop() { if (!this.ok) return; this.seq++; clearTimeout(this.guard); speechSynthesis.cancel(); },
     speak(text, l, slow, onstart, onend) {
       if (!this.ok) return false;
-      speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = LOCALE[l] || 'en-US'; const v = this.voiceFor(l); if (v) u.voice = v;
-      u.rate = slow ? .6 : .9; u.pitch = 1;
-      u.onstart = onstart || null; u.onend = onend || null; u.onerror = onend || null;
-      speechSynthesis.speak(u); return true;
+      const s = speechSynthesis, id = ++this.seq, words = this.text(text, l);
+      if (!words.trim()) return true;
+      const say = () => {
+        if (id !== this.seq) return;
+        const u = new SpeechSynthesisUtterance(words);
+        u.lang = LOCALE[l] || 'en-US'; const v = this.voiceFor(l); if (v) u.voice = v;
+        u.rate = slow ? .6 : .9; u.pitch = 1; u.volume = 1;
+        let done = false;
+        const fin = () => { if (done) return; done = true; if (id !== this.seq) return; clearTimeout(this.guard); if (onend) onend(); };
+        u.onstart = () => { if (id === this.seq && onstart) onstart(); };
+        u.onend = fin; u.onerror = fin;
+        this.keep = u; // Chrome: referansı tutulmayan ifade çöpe gidince onend hiç gelmiyor
+        clearTimeout(this.guard); this.guard = setTimeout(fin, (slow ? 3000 : 2000) + words.length * 250); // onend gelmezse animasyon takılı kalmasın
+        if (s.paused) s.resume(); // Chrome bazen duraklatılmış durumda takılı kalıyor
+        s.speak(u);
+      };
+      // cancel() hemen ardından speak() Chrome/Safari'de yeni ifadeyi yutabiliyor; kısa bir ara ver
+      if (s.speaking || s.pending) { s.cancel(); setTimeout(say, 80); } else say();
+      return true;
     },
   };
-  TTS.load(); if (TTS.ok) speechSynthesis.onvoiceschanged = () => TTS.load();
+  TTS.load(); if (TTS.ok) speechSynthesis.addEventListener('voiceschanged', () => TTS.load());
   $('#ttsWarn').classList.toggle('hidden', TTS.ok);
 
   // ---------- Öğretmen ----------
@@ -247,7 +275,7 @@
     $('#tilesMode').classList.toggle('hidden', cfg.mode !== 'tiles'); $('#choices').classList.toggle('hidden', cfg.mode !== 'choice');
     $('#btnSpeak').title = t('dinle.listen'); $('#btnSlow').title = t('dinle.slow');
     $('#dz').style.visibility = 'hidden';
-    if (!TTS.ok) Egido.toast(t('dinle.noTts'), 'error');
+    if (!TTS.ok) Egido.toast(t('dinle.noTts'), 'error'); else TTS.unlock();
     Egido.countdown(3, () => { $('#dz').style.visibility = ''; showQuestion(); }, () => G.running);
   }
   function speak(slow) {
@@ -367,7 +395,7 @@
   $('#btnQuit').onclick = async () => { if (G.running && await EgidoUI.confirm(t('puzzle.quitConfirm'))) endGame('quit'); };
 
   function endGame(kind) {
-    G.running = false; stopTimer(); if (TTS.ok) speechSynthesis.cancel();
+    G.running = false; stopTimer(); TTS.stop(); $('#btnSpeak').classList.remove('talking');
     document.body.classList.remove('playing');
     const total = G.order.length, time = (performance.now() - G.t0) / 1000;
     const r = { kind: kind || (G.correct === total ? 'win' : 'lose'), score: G.score, correct: G.correct, total, wrong: G.wrong, time, missed: G.missed, missedTitle: t('puzzle.missed') };
