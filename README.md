@@ -27,7 +27,7 @@ Canlı adres: `https://kalkansa.github.io/egido/`
 | 🔊 Dinle ve Yaz | `games/dinle/` | Cihaz kelimeyi sesli okur (Web Speech API); öğrenci harfleri dizer ya da 4 yazılıştan doğrusunu seçer |
 | 🐧 Zıp Zıp Penguen | `games/penguen/` | Soru başına 3-4 buz bloğu; doğruya zıplayınca yeni bloklar, yanlışta buz çatlar ve penguen suya düşer |
 | 🎡 Çarkıfelek | `games/cark/` | Dilimler öğretmenin kategorileri; çark çevrilir, çıkan kategoriden soru gelir, cevap kutusundan doğrusu seçilir |
-| 🗼 Jenga Kulesi | `games/jenga/` | Cevaplar kuledeki tahtalarda; doğru tahta çekilip tepeye konur, kule yükselir; yanlış tahta çekilirse kule yıkılır |
+| 🗼 Tahta Kule | `games/kule/` | Cevaplar kuledeki tahtalarda; doğru tahta çekilip tepeye konur, kule yükselir; yanlış tahta çekilirse kule yıkılır |
 
 ## Klasör yapısı
 
