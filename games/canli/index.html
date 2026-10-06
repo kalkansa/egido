@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Kara Tahta</title>
+<link rel="icon" type="image/svg+xml" href="../../shared/logo.svg?v=202610061645">
+<link rel="stylesheet" href="../../shared/egido.css?v=202610061645">
+<style>
+  /* ---------- Öğretmen: soru listesi ---------- */
+  .qs { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+  .qitem { background: #f1f5fb; border-radius: 12px; padding: 10px 12px; display: grid; gap: 8px; }
+  .qitem .top { display: flex; gap: 8px; align-items: center; }
+  .qitem .no { font-weight: 800; color: var(--muted); width: 26px; text-align: center; }
+  .qitem .top input { flex: 1; margin: 0; }
+  .qitem .rm { background: none; border: 0; color: var(--bad); font-size: 20px; cursor: pointer; padding: 4px 8px; }
+  .qitem .answers { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  @media (max-width: 720px) { .qitem .answers { grid-template-columns: 1fr 1fr; } }
+  .qitem .answers input { margin: 0; font-size: 14px; }
+  .qitem .a-ok { border-color: #bfe9cf; background: #f4fff7; } .qitem .a-ok:focus { border-color: var(--ok); }
+  .qitem .a-bad { border-color: #f5c6c1; } .qitem .a-bad:focus { border-color: var(--bad); }
+  .addrow { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  .chk { display: flex; align-items: center; gap: 8px; font-size: 14px; margin-top: 8px; } .chk input { width: auto; margin: 0; }
+  #btnStart { display: none; } /* yan bölmede deneme bu oyunda anlamsız: oyun gerçek bağlantı ister */
+
+  /* ---------- Canlı sahne (tahta + tablet) ---------- */
+  body.playing { background: linear-gradient(160deg, #1e1b4b 0%, #312e81 55%, #1e3a8a 100%); }
+  .live { position: absolute; inset: 0; display: flex; flex-direction: column; color: #fff; padding: 14px 18px; box-sizing: border-box; gap: 12px; overflow: hidden; }
+  .live .top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .live .pill { background: rgba(255,255,255,.14); border-radius: 999px; padding: 8px 16px; font-weight: 800; font-size: 16px; white-space: nowrap; }
+  .live .pill.x { cursor: pointer; } .live .pill.x:hover { background: rgba(255,255,255,.28); }
+  .live .spacer { flex: 1; }
+  .live .btn { font-size: 20px; padding: 14px 30px; }
+  .live .actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .bar { height: 12px; background: rgba(255,255,255,.18); border-radius: 999px; overflow: hidden; flex: 1; min-width: 80px; }
+  .bar i { display: block; height: 100%; background: #fbbf24; border-radius: 999px; transition: width .1s linear; }
+  .bar i.warn { background: #f87171; }
+  /* tahta: lobi */
+  .lobby { display: grid; grid-template-columns: auto 1fr; gap: 26px; align-items: start; flex: 1; min-height: 0; }
+  @media (max-width: 760px) { .lobby { grid-template-columns: 1fr; } }
+  .pinbox { background: #fff; color: #1e1b4b; border-radius: 22px; padding: 20px 24px; text-align: center; min-width: 260px; }
+  .pinbox .lbl { font-size: 13px; color: #6b7280; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; }
+  .pinbox .pin { font-size: clamp(44px, 7vw, 86px); font-weight: 900; letter-spacing: 8px; line-height: 1.1; margin: 2px 0 8px; font-variant-numeric: tabular-nums; }
+  .pinbox .url { font-size: 15px; color: #374151; word-break: break-all; line-height: 1.35; }
+  .pinbox .url b { color: #1e1b4b; }
+  .pinbox .qr { display: flex; justify-content: center; margin-top: 12px; } .pinbox .qr img, .pinbox .qr canvas { border-radius: 8px; }
+  .hcount { font-size: clamp(20px, 2.6vw, 28px); font-weight: 800; margin-bottom: 10px; opacity: .95; }
+  .plist { display: flex; flex-wrap: wrap; gap: 10px; align-content: flex-start; overflow: auto; max-height: 100%; }
+  .plist .p { background: rgba(255,255,255,.16); border-radius: 14px; padding: 10px 16px; font-weight: 800; font-size: clamp(16px, 2.2vw, 22px); animation: pop .3s ease; }
+  .plist .p.off { opacity: .35; text-decoration: line-through; }
+  @keyframes pop { from { transform: scale(.6); opacity: 0; } }
+  /* tahta: soru */
+  .qtext { flex: 1; display: flex; align-items: center; justify-content: center; text-align: center; font-size: clamp(26px, 5vw, 64px); font-weight: 900; line-height: 1.2; text-shadow: 0 3px 10px rgba(0,0,0,.35); padding: 0 3vw; min-height: 0; overflow: auto; }
+  .timer { font-size: clamp(32px, 5.5vw, 68px); font-weight: 900; min-width: 2ch; text-align: center; font-variant-numeric: tabular-nums; line-height: 1; }
+  .timer.warn { color: #fca5a5; }
+  .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 600px) { .opts { grid-template-columns: 1fr; } }
+  .opt { border-radius: 16px; padding: 14px 18px; font-size: clamp(17px, 2.5vw, 30px); font-weight: 800; display: flex; align-items: center; gap: 14px; color: #fff; position: relative; overflow: hidden; min-height: 60px; box-sizing: border-box; }
+  .opt .sh { font-size: 1.15em; width: 1.4em; text-align: center; flex: none; }
+  .c0 { background: #e21b3c; } .c1 { background: #1368ce; } .c2 { background: #d89e00; } .c3 { background: #26890c; }
+  .opt.dim { opacity: .4; } .opt.ok { outline: 5px solid #fff; outline-offset: -5px; }
+  .opt .cnt { margin-left: auto; background: rgba(0,0,0,.28); border-radius: 999px; padding: 4px 14px; font-size: .75em; flex: none; }
+  .opt .dist { position: absolute; left: 0; bottom: 0; height: 7px; background: rgba(255,255,255,.9); transition: width .6s ease; }
+  .reveal { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; flex: 1; min-height: 0; }
+  @media (max-width: 760px) { .reveal { grid-template-columns: 1fr; } }
+  .reveal .opts { grid-template-columns: 1fr; align-content: start; }
+  .toplist { background: rgba(255,255,255,.1); border-radius: 18px; padding: 10px 18px; overflow: auto; }
+  .toplist h3 { margin: 4px 0 8px; font-size: 18px; opacity: .85; text-transform: uppercase; letter-spacing: 1px; }
+  .toplist .row { display: flex; justify-content: space-between; gap: 12px; font-size: clamp(17px, 2.2vw, 26px); font-weight: 800; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,.1); }
+  .toplist .row:last-child { border-bottom: 0; } .toplist .row .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .toplist .row .sc { font-variant-numeric: tabular-nums; flex: none; }
+  /* tahta: podyum */
+  .podium { display: flex; align-items: flex-end; justify-content: center; gap: 14px; flex: 1; min-height: 0; padding-top: 10px; }
+  .pod { background: rgba(255,255,255,.14); border-radius: 18px 18px 0 0; width: min(28vw, 260px); text-align: center; padding: 14px 10px; display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; }
+  .pod.p1 { height: 72%; background: rgba(251,191,36,.3); } .pod.p2 { height: 56%; } .pod.p3 { height: 44%; }
+  .pod .md { font-size: clamp(32px, 5vw, 56px); } .pod .nm { font-size: clamp(16px, 2.4vw, 30px); font-weight: 900; word-break: break-word; } .pod .sc { font-size: clamp(14px, 1.8vw, 22px); opacity: .9; }
+  /* tablet */
+  .pwrap { flex: 1; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+  .pq { text-align: center; font-size: clamp(17px, 3vw, 26px); font-weight: 800; opacity: .95; }
+  .pbtns { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 12px; min-height: 0; }
+  .pbtn { border: 0; border-radius: 20px; color: #fff; font-size: clamp(20px, 4vw, 40px); font-weight: 900; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; cursor: pointer; padding: 10px; word-break: break-word; text-align: center; box-shadow: 0 6px 0 rgba(0,0,0,.25); font-family: inherit; }
+  .pbtn:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,.25); }
+  .pbtn .sh { font-size: 1.3em; line-height: 1; }
+  .center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 12px; padding: 10px; }
+  .center .big { font-size: clamp(56px, 14vw, 130px); line-height: 1; }
+  .center h2 { margin: 0; font-size: clamp(26px, 6vw, 52px); }
+  .center p { margin: 0; font-size: clamp(16px, 3.4vw, 26px); opacity: .92; }
+  .center .sub { font-size: clamp(14px, 2.6vw, 20px); opacity: .7; }
+  .center .chosen { width: min(60vw, 240px); height: 70px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 34px; }
+  .dots::after { content: '…'; display: inline-block; width: 1.2em; text-align: left; animation: dots 1.5s steps(4) infinite; }
+  @keyframes dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+  .flash { position: fixed; inset: 0; pointer-events: none; z-index: 3; opacity: 0; transition: opacity .5s; }
+  .flash.on { opacity: .55; transition: none; }
+</style>
+</head>
+<body>
+
+<!-- ===================== ÖĞRETMEN KURULUM ===================== -->
+<div id="setup" class="screen">
+  <div class="card">
+    <div id="teacherBarHost"></div>
+    <h1 data-i18n="canli.title"></h1>
+    <p class="sub" data-i18n="canli.sub"></p>
+    <div class="row" style="margin:0 0 4px"><button class="btn secondary small" id="btnExample" data-i18n="setup.example"></button></div>
+
+    <div class="cols">
+      <div>
+        <label for="time" data-i18n="canli.time"></label>
+        <select id="time"><option value="10">10 s</option><option value="20" selected>20 s</option><option value="30">30 s</option><option value="45">45 s</option><option value="60">60 s</option></select>
+      </div>
+      <div>
+        <label for="scoring" data-i18n="canli.scoring"></label>
+        <select id="scoring"><option value="speed" selected data-i18n="canli.speed"></option><option value="flat" data-i18n="canli.flat"></option></select>
+      </div>
+    </div>
+    <label class="chk"><input type="checkbox" id="boardOpts"><span data-i18n="canli.boardOpts"></span></label>
+
+    <label data-i18n="kule.items"></label>
+    <div class="qs" id="qs"></div>
+    <div class="addrow">
+      <button class="btn secondary" id="btnAdd" data-i18n="kule.add"></button>
+    </div>
+    <p class="hint" data-i18n="canli.help"></p>
+
+    <div class="err" id="setupErr"></div>
+    <div class="row">
+      <button class="btn" id="btnHost" data-i18n="canli.host"></button>
+      <button class="btn" id="btnStart" data-i18n="setup.try"></button>
+      <button class="btn secondary" id="btnShare" data-i18n="setup.code"></button>
+      <button class="btn secondary" id="btnLbSetup" data-i18n="setup.lb"></button>
+    </div>
+    <div id="sharePanelHost"></div>
+  </div>
+</div>
+
+<!-- ===================== CANLI SAHNE ===================== -->
+<div id="game" class="screen hidden">
+  <div class="live" id="live"></div>
+  <div class="flash" id="flash"></div>
+</div>
+
+<script src="../../shared/config.js?v=202610061645"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="../../shared/i18n.js?v=202610061645"></script>
+<script src="../../shared/ui.js?v=202610061645"></script>
+<script src="../../shared/header.js?v=202610061645"></script>
+<script src="../../shared/egido.js?v=202610061645"></script>
+<script>
+(() => {
+  'use strict';
+  const $ = s => document.querySelector(s);
+  const t = I18N.t;
+  const { sfx, tone, escapeHtml, shuffle } = Egido;
+  const esc = escapeHtml;
+  const NW = 3, SH = ['▲', '◆', '●', '■'];
+  const live = $('#live');
+
+  // ---------- Öğretmen: soru düzenleme ----------
+  let qs = [];
+  function renderQs() {
+    const box = $('#qs');
+    box.innerHTML = qs.map((it, i) => `
+      <div class="qitem" data-i="${i}">
+        <div class="top"><span class="no">${i + 1}</span><input type="text" class="q" placeholder="${t('kule.qPh')}" maxlength="200" value="${esc(it.q)}"><button class="rm" title="${t('puzzle.remove')}">✕</button></div>
+        <div class="answers">
+          <input type="text" class="a a-ok" placeholder="${t('kule.aPh')}" maxlength="60" value="${esc(it.a)}">
+          ${[0, 1, 2].map(k => `<input type="text" class="w a-bad" data-k="${k}" placeholder="${t('kule.wPh', { n: k + 1 })}" maxlength="60" value="${esc(it.w[k] || '')}">`).join('')}
+        </div>
+      </div>`).join('') || `<div class="hint">${t('kule.noItems')}</div>`;
+    box.querySelectorAll('.qitem').forEach(row => {
+      const i = +row.dataset.i;
+      row.querySelector('.q').oninput = e => { qs[i].q = e.target.value; };
+      row.querySelector('.a').oninput = e => { qs[i].a = e.target.value; };
+      row.querySelectorAll('.w').forEach(inp => inp.oninput = e => { qs[i].w[+inp.dataset.k] = e.target.value; });
+      row.querySelector('.rm').onclick = () => { qs.splice(i, 1); renderQs(); };
+    });
+  }
+  document.addEventListener('egido:lang', () => { renderQs(); if (H) renderHost(); if (S) renderPlayer(); });
+  $('#btnAdd').onclick = () => { qs.push({ q: '', a: '', w: ['', '', ''] }); renderQs(); const rows = document.querySelectorAll('.qitem .q'); if (rows.length) rows[rows.length - 1].focus(); };
+  $('#btnExample').onclick = () => writeConfig({ items: t('canli.ex').split('|').map(s => { const p = s.split(';'); return { q: p[0], a: p[1], w: p.slice(2) }; }), time: 20, scoring: 'speed', boardOpts: false });
+
+  function readConfig() {
+    return { items: qs.map(it => ({ q: it.q.trim(), a: it.a.trim(), w: it.w.slice(0, NW).map(x => (x || '').trim()) })).filter(it => it.q || it.a || it.w.some(Boolean)),
+      time: +$('#time').value, scoring: $('#scoring').value, boardOpts: $('#boardOpts').checked };
+  }
+  function writeConfig(c) {
+    $('#time').value = c.time || 20; $('#scoring').value = c.scoring || 'speed'; $('#boardOpts').checked = !!c.boardOpts;
+    qs = (c.items || []).map(it => ({ q: it.q || '', a: it.a || '', w: [...(it.w || []), '', '', ''].slice(0, 3) }));
+    renderQs();
+  }
+  function validate(c) {
+    if (!Array.isArray(c.items) || !c.items.length) return t('kule.errEmpty');
+    for (let i = 0; i < c.items.length; i++) {
+      const it = c.items[i];
+      if (!it.q || !it.a || !Array.isArray(it.w) || it.w.length < NW || it.w.slice(0, NW).some(x => !x)) return t('kule.errFields', { n: i + 1 });
+      const low = it.w.map(x => x.toLocaleLowerCase());
+      if (low.includes(it.a.toLocaleLowerCase()) || new Set(low).size !== low.length) return t('kule.errDup', { n: i + 1 });
+    }
+    return '';
+  }
+
+  // ---------- Kanal (Supabase Realtime: Presence + Broadcast) ----------
+  let myId = sessionStorage.getItem('egido-live-id');
+  if (!myId) { myId = Math.random().toString(36).slice(2, 10); sessionStorage.setItem('egido-live-id', myId); }
+  let ch = null;
+  function connect(code, meta, onMsg, onPresence, onStatus) {
+    disconnect();
+    ch = Egido.sb.channel('live:' + code, { config: { presence: { key: myId }, broadcast: { self: false } } });
+    ch.on('presence', { event: 'sync' }, () => onPresence(ch.presenceState()));
+    for (const ev of ['q', 'r', 'end', 'sync', 'a', 'who', 'bye']) ch.on('broadcast', { event: ev }, ({ payload }) => onMsg(ev, payload || {}));
+    ch.subscribe(status => { if (status === 'SUBSCRIBED') ch.track(Object.assign({ id: myId }, meta)); onStatus(status); });
+  }
+  const send = (ev, payload) => { if (ch) ch.send({ type: 'broadcast', event: ev, payload }); };
+  function disconnect() { if (ch) { try { Egido.sb.removeChannel(ch); } catch (e) {} ch = null; } }
+  const flash = color => { const f = $('#flash'); f.style.background = color; f.classList.add('on'); setTimeout(() => f.classList.remove('on'), 60); };
+
+  // ======================= TAHTA (öğretmen) =======================
+  let H = null;
+  $('#btnHost').onclick = async () => {
+    const c = readConfig(); const e = validate(c);
+    if (e) { Egido.setErr(e); return; }
+    Egido.setErr('');
+    if (!Egido.remote || !Egido.session) { Egido.setErr(t('canli.needLogin')); return; }
+    const saved = await Egido.save({ silent: true });
+    if (!saved) return;
+    H = { code: saved.code, cfg: c, phase: 'lobby', idx: -1, P: new Map(), order: c.items.map((_, i) => i), opts: [], correct: -1, timer: null, tEnd: 0, lastQ: null, lastR: null, lastEnd: null, status: '' };
+    Egido.show('game'); document.body.classList.add('playing');
+    renderHost();
+    connect(saved.code, { role: 'h' }, onHostMsg, onHostPresence, st => { H.status = st; if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') EgidoUI.toast(t('canli.connFail'), 'error'); });
+  };
+  function onHostPresence(state) {
+    if (!H) return;
+    const online = new Set();
+    for (const key of Object.keys(state)) for (const m of state[key]) {
+      if (m.role !== 'p') continue;
+      online.add(key);
+      if (!H.P.has(key)) H.P.set(key, { id: key, name: m.name || '?', cls: m.cls || '', total: 0, streak: 0, correct: 0, wrong: 0, ans: {}, missed: [], rank: 0 });
+      else { const p = H.P.get(key); p.name = m.name || p.name; p.cls = m.cls || p.cls; }
+    }
+    for (const p of H.P.values()) p.on = online.has(p.id);
+    if (H.phase === 'lobby' || H.phase === 'q') renderHost();
+    if (H.phase === 'q') checkAllAnswered();
+  }
+  function onHostMsg(ev, m) {
+    if (!H) return;
+    if (ev === 'who') { send('sync', { to: m.id, phase: H.phase, q: H.lastQ, left: Math.max(0, H.tEnd - Date.now()), r: H.lastR, end: H.lastEnd }); return; }
+    if (ev === 'a') {
+      if (H.phase !== 'q' || m.idx !== H.idx) return;
+      const p = H.P.get(m.id); if (!p || p.ans[H.idx]) return;
+      p.ans[H.idx] = { c: +m.c, t: Math.max(0, +m.t || 0) };
+      tone(880, .05, 'triangle', .05);
+      renderHostAnswered(); checkAllAnswered();
+    }
+  }
+  const onlineCount = () => [...H.P.values()].filter(p => p.on).length;
+  const answeredCount = () => [...H.P.values()].filter(p => p.ans[H.idx]).length;
+  function checkAllAnswered() { const n = onlineCount(); if (H.phase === 'q' && n > 0 && answeredCount() >= n) setTimeout(() => { if (H && H.phase === 'q') endQuestion(); }, 400); }
+
+  function startQuiz() { if (!H.P.size) { EgidoUI.toast(t('canli.noPlayers'), 'error'); return; } nextQuestion(); }
+  function nextQuestion() {
+    H.idx++;
+    if (H.idx >= H.order.length) return endQuiz();
+    const q = H.cfg.items[H.order[H.idx]];
+    const opts = shuffle([{ text: q.a, ok: true }, ...q.w.slice(0, NW).map(x => ({ text: x, ok: false }))]);
+    H.opts = opts.map(o => o.text); H.correct = opts.findIndex(o => o.ok);
+    H.phase = 'q'; H.tEnd = Date.now() + H.cfg.time * 1000;
+    H.lastQ = { idx: H.idx, n: H.order.length, text: q.q, opts: H.opts, dur: H.cfg.time };
+    send('q', H.lastQ);
+    renderHost();
+    clearInterval(H.timer); H.timer = setInterval(tickHost, 100);
+    tone(660, .12, 'triangle', .12);
+  }
+  function tickHost() {
+    if (!H || H.phase !== 'q') { if (H) clearInterval(H.timer); return; }
+    const left = Math.max(0, H.tEnd - Date.now()), s = Math.ceil(left / 1000);
+    const tm = $('#hTimer'), bar = $('#hBar i');
+    if (tm) { tm.textContent = s; tm.classList.toggle('warn', s <= 5); }
+    if (bar) { bar.style.width = (left / (H.cfg.time * 1000) * 100) + '%'; bar.classList.toggle('warn', s <= 5); }
+    if (s <= 3 && s > 0 && H.lastTick !== s) { H.lastTick = s; tone(520, .06, 'square', .06); }
+    if (left <= 0) endQuestion();
+  }
+  function endQuestion() {
+    clearInterval(H.timer); H.phase = 'reveal';
+    const qtext = H.cfg.items[H.order[H.idx]].q, dist = [0, 0, 0, 0], res = {};
+    for (const p of H.P.values()) {
+      const a = p.ans[H.idx]; let ok = false, pts = 0;
+      if (a && a.c >= 0 && a.c < 4) { dist[a.c]++; ok = a.c === H.correct; }
+      if (ok) {
+        p.streak++; p.correct++;
+        pts = H.cfg.scoring === 'flat' ? 1000 : Math.round(500 + 500 * Math.max(0, 1 - a.t / (H.cfg.time * 1000)));
+        if (p.streak >= 2) pts += 100 * (Math.min(p.streak, 6) - 1); // seri bonusu
+      } else { p.streak = 0; p.wrong++; p.missed.push(qtext); }
+      p.total += pts; p.lastOk = ok; p.lastPts = pts;
+    }
+    const ranked = rankPlayers();
+    for (const p of H.P.values()) res[p.id] = { ok: p.lastOk, pts: p.lastPts, total: p.total, rank: p.rank, streak: p.streak, answered: !!p.ans[H.idx] };
+    H.lastR = { idx: H.idx, correct: H.correct, dist, res, top: ranked.slice(0, 5).map(p => ({ name: p.name, total: p.total })), n: H.P.size };
+    send('r', H.lastR);
+    sfx.good(); renderHost();
+  }
+  function rankPlayers() { const r = [...H.P.values()].sort((a, b) => b.total - a.total || b.correct - a.correct); r.forEach((p, i) => p.rank = i + 1); return r; }
+  function endQuiz() {
+    clearInterval(H.timer); H.phase = 'end';
+    const ranked = rankPlayers(), res = {};
+    for (const p of ranked) res[p.id] = { total: p.total, rank: p.rank, correct: p.correct, wrong: p.wrong, missed: p.missed };
+    H.lastEnd = { n: H.order.length, res, top: ranked.slice(0, 3).map(p => ({ name: p.name, cls: p.cls, total: p.total })), all: ranked.map(p => ({ name: p.name, total: p.total })) };
+    send('end', H.lastEnd);
+    sfx.win(); renderHost();
+  }
+  function againQuiz() {
+    for (const p of H.P.values()) Object.assign(p, { total: 0, streak: 0, correct: 0, wrong: 0, ans: {}, missed: [], rank: 0 });
+    H.phase = 'lobby'; H.idx = -1; H.lastQ = H.lastR = H.lastEnd = null;
+    send('sync', { to: '*', phase: 'lobby' });
+    renderHost();
+  }
+  async function closeHost() {
+    if (H.phase !== 'end' && H.P.size && !(await EgidoUI.confirm(t('canli.closeConfirm'), { danger: true }))) return;
+    send('bye', {}); clearInterval(H.timer);
+    setTimeout(disconnect, 300);
+    H = null; live.innerHTML = ''; document.body.classList.remove('playing'); Egido.show('setup');
+  }
+
+  // ---------- Tahta çizimi ----------
+  const joinUrl = () => location.origin + location.pathname + '?k=' + H.code;
+  const topBar = (mid = '') => `<div class="top"><span class="pill">📺 ${esc(H.cfg.items.length ? t('canli.summary', { n: H.cfg.items.length }) : '')}</span>${mid}<span class="spacer"></span><span class="pill">🔑 ${H.code}</span><span class="pill x" id="hClose" title="${esc(t('canli.close'))}">✕</span></div>`;
+  function renderHost() {
+    if (!H) return;
+    const players = [...H.P.values()];
+    if (H.phase === 'lobby') {
+      live.innerHTML = topBar() + `
+        <div class="lobby">
+          <div class="pinbox">
+            <div class="lbl">${esc(t('canli.pin'))}</div>
+            <div class="pin">${H.code}</div>
+            <div class="url">${esc(t('canli.joinAt'))}:<br><b>${esc(location.host + location.pathname.replace(/games\/canli\/.*$/, '').replace(/\/$/, ''))}</b></div>
+            <div class="qr" id="hQr"></div>
+          </div>
+          <div style="min-height:0;display:flex;flex-direction:column">
+            <div class="hcount">${players.length ? esc(t('canli.players', { n: players.length })) : `<span class="dots">${esc(t('canli.waiting').replace(/…$/, ''))}</span>`}</div>
+            <div class="plist">${players.map(p => `<span class="p${p.on ? '' : ' off'}">${esc(p.name)}${p.cls ? ` <small>· ${esc(p.cls)}</small>` : ''}</span>`).join('')}</div>
+          </div>
+        </div>
+        <div class="actions"><button class="btn" id="hStart" ${players.length ? '' : 'disabled'}>${esc(t('canli.start'))}</button></div>`;
+      Egido.drawQr($('#hQr'), joinUrl(), 220);
+      $('#hStart').onclick = startQuiz;
+    } else if (H.phase === 'q') {
+      const q = H.lastQ;
+      live.innerHTML = topBar(`<span class="pill">${esc(t('canli.qNo', { i: q.idx + 1, n: q.n }))}</span><span class="pill" id="hAns">${esc(t('canli.answered', { a: answeredCount(), n: onlineCount() }))}</span>`) + `
+        <div class="top"><div class="timer" id="hTimer">${H.cfg.time}</div><div class="bar" id="hBar"><i style="width:100%"></i></div></div>
+        <div class="qtext">${esc(q.text)}</div>
+        ${H.cfg.boardOpts ? `<div class="opts">${q.opts.map((o, i) => `<div class="opt c${i}"><span class="sh">${SH[i]}</span>${esc(o)}</div>`).join('')}</div>` : ''}`;
+    } else if (H.phase === 'reveal') {
+      const q = H.lastQ, r = H.lastR, tot = Math.max(1, r.dist.reduce((a, b) => a + b, 0)), last = H.idx >= H.order.length - 1;
+      live.innerHTML = topBar(`<span class="pill">${esc(t('canli.qNo', { i: q.idx + 1, n: q.n }))}</span>`) + `
+        <div class="qtext" style="flex:0 0 auto;font-size:clamp(20px,3.4vw,42px);padding:6px 2vw">${esc(q.text)}</div>
+        <div class="reveal">
+          <div class="opts">${q.opts.map((o, i) => `<div class="opt c${i}${i === r.correct ? ' ok' : ' dim'}"><span class="sh">${i === r.correct ? '✓' : SH[i]}</span>${esc(o)}<span class="cnt">${r.dist[i]}</span><i class="dist" style="width:${r.dist[i] / tot * 100}%"></i></div>`).join('')}</div>
+          <div class="toplist"><h3>${esc(t('canli.top'))}</h3>${r.top.map((p, i) => `<div class="row"><span class="nm">${i + 1}. ${esc(p.name)}</span><span class="sc">${p.total}</span></div>`).join('') || `<div class="row">—</div>`}</div>
+        </div>
+        <div class="actions"><button class="btn" id="hNext">${esc(last ? t('canli.results') : t('canli.next'))}</button></div>`;
+      $('#hNext').onclick = nextQuestion;
+    } else if (H.phase === 'end') {
+      const e = H.lastEnd, md = ['🥇', '🥈', '🥉'], order = [1, 0, 2].filter(i => e.top[i]);
+      live.innerHTML = topBar() + `
+        <div class="hcount" style="text-align:center;margin:0">${esc(t('canli.podium'))}</div>
+        <div class="podium">${order.map(i => `<div class="pod p${i + 1}"><div class="md">${md[i]}</div><div class="nm">${esc(e.top[i].name)}</div><div class="sc">${e.top[i].total}</div></div>`).join('') || `<div class="hcount">${esc(t('canli.noPlayers'))}</div>`}</div>
+        ${e.all.length > 3 ? `<div class="toplist" style="max-height:28vh">${e.all.slice(3).map((p, i) => `<div class="row"><span class="nm">${i + 4}. ${esc(p.name)}</span><span class="sc">${p.total}</span></div>`).join('')}</div>` : ''}
+        <div class="actions"><button class="btn secondary" id="hAgain">${esc(t('canli.again'))}</button><button class="btn" id="hDone">${esc(t('canli.close'))}</button></div>`;
+      $('#hAgain').onclick = againQuiz; $('#hDone').onclick = closeHost;
+    }
+    $('#hClose').onclick = closeHost;
+  }
+  function renderHostAnswered() { const el = $('#hAns'); if (el) el.textContent = t('canli.answered', { a: answeredCount(), n: onlineCount() }); }
+
+  // ======================= TABLET (öğrenci) =======================
+  let S = null;
+  function startGame(cfg) {
+    const code = (new URLSearchParams(location.search).get('k') || '').toUpperCase();
+    if (!code || !Egido.remote) { document.body.classList.add('playing'); live.innerHTML = `<div class="center"><div class="big">📺</div><p>${esc(t('canli.onlyJoin'))}</p></div>`; return; }
+    const p = Egido.player;
+    S = { cfg, code, phase: 'connecting', hostOn: false, q: null, choice: null, tRecv: 0, total: 0, correct: 0, wrong: 0, t0: performance.now(), timer: null, last: null, n: cfg.items.length };
+    document.body.classList.add('playing'); renderPlayer();
+    connect(code, { role: 'p', name: p.name, cls: p.cls }, onPlayerMsg, onPlayerPresence, st => {
+      if (st === 'SUBSCRIBED') { if (S.phase === 'connecting') S.phase = 'wait'; send('who', { id: myId }); renderPlayer(); }
+      else if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') EgidoUI.toast(t('canli.connFail'), 'error');
+    });
+  }
+  function onPlayerPresence(state) {
+    if (!S) return;
+    S.hostOn = Object.values(state).some(arr => arr.some(m => m.role === 'h'));
+    if (S.phase === 'wait' || S.phase === 'connecting') renderPlayer();
+  }
+  function onPlayerMsg(ev, m) {
+    if (!S) return;
+    if (ev === 'sync') {
+      if (m.to !== myId && m.to !== '*') return;
+      if (m.phase === 'q' && m.q && (!S.q || S.q.idx !== m.q.idx || S.phase === 'wait')) { showQuestion(m.q, m.left); return; }
+      if (m.phase === 'reveal' && m.r && S.phase !== 'reveal') { if (m.q) S.q = m.q; showReveal(m.r); return; }
+      if (m.phase === 'end' && m.end) { finishPlayer(m.end); return; }
+      if (m.phase === 'lobby') { S.phase = 'wait'; S.q = null; S.total = 0; S.correct = 0; S.wrong = 0; renderPlayer(); }
+      return;
+    }
+    if (ev === 'q') showQuestion(m, m.dur * 1000);
+    else if (ev === 'r') { if (S.q && m.idx === S.q.idx) showReveal(m); }
+    else if (ev === 'end') finishPlayer(m);
+    else if (ev === 'bye') { EgidoUI.toast(t('canli.hostGone')); quitPlayer(true); }
+  }
+  function showQuestion(q, leftMs) {
+    S.q = q; S.phase = 'q'; S.choice = null; S.tRecv = performance.now(); S.leftMs = leftMs == null ? q.dur * 1000 : leftMs; S.last = null;
+    renderPlayer(); tone(660, .1, 'triangle', .1);
+    clearInterval(S.timer);
+    S.timer = setInterval(() => {
+      if (!S || S.phase !== 'q' && S.phase !== 'answered') return clearInterval(S.timer);
+      const left = Math.max(0, S.leftMs - (performance.now() - S.tRecv)), bar = $('#pBar i'), tm = $('#pTimer');
+      if (bar) { bar.style.width = (left / (q.dur * 1000) * 100) + '%'; bar.classList.toggle('warn', left < 5000); }
+      if (tm) tm.textContent = Math.ceil(left / 1000);
+      if (left <= 0) { clearInterval(S.timer); if (S.phase === 'q') { S.phase = 'late'; renderPlayer(); } }
+    }, 100);
+  }
+  function answer(c) {
+    if (!S || S.phase !== 'q') return;
+    S.choice = c; S.phase = 'answered';
+    send('a', { id: myId, idx: S.q.idx, c, t: Math.round(S.q.dur * 1000 - S.leftMs + (performance.now() - S.tRecv)) }); // süre, sorunun tahtada başladığı andan ölçülür
+    tone(880, .08, 'triangle', .1); renderPlayer();
+  }
+  function showReveal(r) {
+    clearInterval(S.timer); S.phase = 'reveal'; S.r = r;
+    const mine = r.res[myId]; S.last = mine || { ok: false, pts: 0, total: S.total, rank: '-', answered: false };
+    if (mine) { S.total = mine.total; if (mine.ok) S.correct++; else S.wrong++; }
+    if (S.last.ok) { sfx.good(); flash('#22c55e'); } else { sfx.bad(); flash('#ef4444'); }
+    renderPlayer();
+  }
+  function finishPlayer(end) {
+    const m = end.res[myId] || { total: S.total, rank: '-', correct: S.correct, wrong: S.wrong, missed: [] };
+    const r = { kind: 'win', score: m.total, correct: m.correct, total: end.n, wrong: m.wrong, time: (performance.now() - S.t0) / 1000, missed: m.missed || [], missedTitle: t('canli.missed') };
+    r.emoji = m.rank === 1 ? '🥇' : m.rank === 2 ? '🥈' : m.rank === 3 ? '🥉' : '📺';
+    r.title = m.rank === 1 ? t('canli.first') : t('canli.endTitle', { r: m.rank });
+    r.msg = t('canli.endMsg', { n: end.n, c: m.correct, t: m.total });
+    cleanupPlayer(); Egido.finish(r);
+  }
+  function cleanupPlayer() { clearInterval(S && S.timer); disconnect(); document.body.classList.remove('playing'); S = null; live.innerHTML = ''; }
+  async function quitPlayer(force) {
+    if (!S) return;
+    if (!force && !(await EgidoUI.confirm(t('canli.quitConfirm')))) return;
+    const r = { kind: 'quit', score: S.total, correct: S.correct, total: S.n, wrong: S.wrong, time: (performance.now() - S.t0) / 1000, emoji: '🚪' };
+    cleanupPlayer(); Egido.finish(r);
+  }
+  function renderPlayer() {
+    if (!S) return;
+    const p = Egido.player;
+    const top = `<div class="top"><span class="pill">👤 ${esc(p.name)}${p.cls ? ' · ' + esc(p.cls) : ''}</span><span class="pill">⭐ ${S.total}</span><span class="spacer"></span>${S.q ? `<span class="pill">${esc(t('canli.qNo', { i: S.q.idx + 1, n: S.q.n }))}</span>` : ''}<span class="pill x" id="pQuit">✕</span></div>`;
+    let body = '';
+    if (S.phase === 'connecting') body = `<div class="center"><div class="big">📡</div><p class="dots">${esc(t('canli.connecting').replace(/…$/, ''))}</p></div>`;
+    else if (S.phase === 'wait') body = `<div class="center"><div class="big">${S.hostOn ? '🙌' : '⏳'}</div><h2>${esc(p.name)}</h2><p>${esc(S.hostOn ? t('canli.connected') : t('canli.noHost'))}</p><p class="sub">${esc(S.hostOn ? t('canli.hostOn') : t('canli.hostOff'))}</p></div>`;
+    else if (S.phase === 'q') body = `<div class="pwrap">
+        <div class="top"><div class="timer" id="pTimer" style="font-size:28px">${S.q.dur}</div><div class="bar" id="pBar"><i style="width:100%"></i></div></div>
+        <div class="pbtns">${S.q.opts.map((o, i) => `<button class="pbtn c${i}" data-c="${i}"><span class="sh">${SH[i]}</span><span>${esc(o)}</span></button>`).join('')}</div>
+      </div>`;
+    else if (S.phase === 'answered') body = `<div class="pwrap"><div class="top"><div class="timer" id="pTimer" style="font-size:28px"></div><div class="bar" id="pBar"><i></i></div></div>
+        <div class="center"><div class="chosen c${S.choice}">${SH[S.choice]}</div><h2>${esc(t('canli.received'))}</h2><p class="sub dots">${esc(t('canli.waitOthers').replace(/…$/, ''))}</p></div></div>`;
+    else if (S.phase === 'late') body = `<div class="center"><div class="big">⌛</div><h2>${esc(t('canli.late'))}</h2><p class="sub dots">${esc(t('canli.waitOthers').replace(/…$/, ''))}</p></div>`;
+    else if (S.phase === 'reveal') {
+      const m = S.last, correctTxt = S.q && S.r ? S.q.opts[S.r.correct] : '';
+      body = `<div class="center"><div class="big">${m.ok ? '✅' : '❌'}</div><h2>${esc(m.ok ? t('canli.good') : m.answered ? t('canli.bad') : t('canli.noAnswer'))}</h2>
+        ${m.ok ? `<p>${esc(t('canli.pts', { p: m.pts }))}${m.streak >= 2 ? ' · ' + esc(t('canli.streak', { s: m.streak })) : ''}</p>` : `<p>${esc(t('canli.correctIs'))}: <b>${esc(correctTxt)}</b></p>`}
+        <p class="sub">${esc(t('canli.total', { t: m.total, r: m.rank }))}</p></div>`;
+    }
+    live.innerHTML = top + body;
+    $('#pQuit').onclick = () => quitPlayer(false);
+    live.querySelectorAll('.pbtn').forEach(b => b.onclick = () => answer(+b.dataset.c));
+  }
+  window.addEventListener('beforeunload', () => { if (H) send('bye', {}); });
+
+  renderQs();
+  Egido.init({
+    gameId: 'canli', emoji: '📺',
+    introRules: () => t('canli.rules'),
+    readConfig, writeConfig, validate,
+    summary: c => t('canli.summary', { n: (c.items || []).length }),
+    startGame,
+  });
+})();
+</script>
+</body>
+</html>

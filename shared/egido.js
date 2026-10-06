@@ -527,5 +527,6 @@ window.Egido = (() => {
   return {
     init, finish, show, toast, escapeHtml, shuffle, sfx, tone, audio, countdown, fmtTime, t,
     get player() { return player; }, get cfg() { return cfg; }, get remote() { return remote; }, get sb() { return sb; },
+    get code() { return currentCode; }, get session() { return session; }, save: opts => saveSet(opts || {}), drawQr, setErr,
   };
 })();

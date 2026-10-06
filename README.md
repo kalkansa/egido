@@ -28,6 +28,7 @@ Canlı adres: `https://kalkansa.github.io/egido/`
 | 🐧 Zıp Zıp Penguen | `games/penguen/` | Soru başına 3-4 buz bloğu; doğruya zıplayınca yeni bloklar, yanlışta buz çatlar ve penguen suya düşer |
 | 🎡 Çarkıfelek | `games/cark/` | Dilimler öğretmenin kategorileri; çark çevrilir, çıkan kategoriden soru gelir, cevap kutusundan doğrusu seçilir |
 | 🗼 Tahta Kule | `games/kule/` | Cevaplar kuledeki tahtalarda; doğru tahta çekilip tepeye konur, kule yükselir; yanlış tahta çekilirse kule yıkılır |
+| 📺 Canlı Yarışma | `games/canli/` | Soru akıllı tahtada, 4 cevap tablette; herkes aynı anda yarışır, hız puanı + seri bonusu, her sorudan sonra sıralama (Supabase Realtime: Presence + Broadcast) |
 
 ## Klasör yapısı
 
