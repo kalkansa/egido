@@ -22,7 +22,6 @@ Canlı adres: `https://kalkansa.github.io/egido/`
 | 🎈 Balon Patlat | `games/balon/` | Doğru cevaplı balonları patlat, yanlışlara dokunma |
 | 🧩 Harf Puzzle | `games/puzzle/` | Resme bak, karışık harf parçalarını dizip kelimeyi yaz |
 | ⚽ Gol Vuruşu | `games/gol/` | Yolda yuvarlanan toplardan doğru cevaplıya vur, gol at; yanlışta kaleci kurtarır ya da top dışarı gider |
-| ⛳ Golf Vuruşu | `games/golf/` | Gol Vuruşu'nun golf hali: doğru top deliğe girer, yanlış top kenardan döner ya da kuma/suya gider |
 | 🔌 Kablo Eşleştirme | `games/kablo/` | Resmi doğru kelimeye kabloyla bağla; doğruysa lamba yanar, yanlışsa kısa devre |
 | 📝 Cümle Kur | `games/cumle/` | Karışık kelimeleri okul fişi üzerinde doğru sıraya diz |
 | 🔊 Dinle ve Yaz | `games/dinle/` | Cihaz kelimeyi sesli okur (Web Speech API); öğrenci harfleri dizer ya da 4 yazılıştan doğrusunu seçer |
