@@ -4,7 +4,7 @@
 // kind: 'mcq'   soru + 1 doğru + nw yanlış         → cfg.items  [{ q, a, w[] }]
 //       'cats'  kategoriler, her birinde mcq        → cfg.cats   [{ name, qs[] }]
 //       'lists' tek yönerge + doğru/yanlış listeleri → cfg.q, cfg.correct[], cfg.wrong[]
-//       'words' kelime + emoji resmi                → cfg.items  [{ word, img: 'emoji:…' }] (+ cfg.lang)
+//       'words' kelime + emoji resmi                → cfg.items  [{ word, img: 'emoji:…' }] (+ cfg.wlang)
 //       'sents' cümleler                            → cfg.items  ['…']
 // Anahtar: giriş yapmış öğretmende Supabase `teacher_settings` tablosunda (RLS: yalnızca sahibi okur),
 // yerel modda bu tarayıcının localStorage'ında. Gemini doğrudan tarayıcıdan çağrılır, aracı sunucu yok.
@@ -165,7 +165,7 @@ Rules:
     else if (o.kind === 'cats') { cfg.cats = [...(cfg.cats || []), ...d.cats]; n = d.cats.reduce((s, c) => s + c.qs.length, 0); }
     else {
       cfg.items = [...(cfg.items || []), ...d.items]; n = d.items.length;
-      if (o.kind === 'words' && d.lang && 'lang' in cfg) cfg.lang = d.lang;
+      if (o.kind === 'words' && d.lang) { if ('wlang' in cfg) cfg.wlang = d.lang; else if ('lang' in cfg) cfg.lang = d.lang; } // Dinle ve Yaz: kelime dili 'wlang'
     }
     o.write(cfg);
     toast(replaced ? t('ai.replaced') : t('ai.added', { n }));
