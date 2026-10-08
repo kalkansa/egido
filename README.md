@@ -13,6 +13,8 @@ Canlı adres: `https://kalkansa.github.io/egido/`
   **Öğrenci Kodu Oluştur** paneli kodu, QR'ı ve kısa bağlantıyı gösterir; **Tam Ekran Göster** tahtaya yansıtılır.
 - **Öğrenci** giriş yapmaz. QR okutur ya da `kalkansa.github.io/egido` adresine girip kodu yazar,
   adını ve sınıfını yazar, oynar. Skoru sınıfın ortak tablosuna düşer.
+- **Oyunu Dene** oyunu kurulum ekranının yanında bir deneme bölmesinde açar (skor kaydedilmez);
+  bölmenin başlığındaki **Tam ekran** düğmesi oyunu ekranı kaplayacak şekilde büyütür.
 - Öğretmen panelinde kayıtlı oyunlar listelenir: kodu göster, düzenle, sil.
 
 ## Oyunlar
