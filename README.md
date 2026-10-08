@@ -94,8 +94,8 @@ Her oyunun kurulum ekranında **✨ Yapay zekâ ile oluştur** butonu var. Öğr
 (tarayıcıda hatırlanır). Dinle ve Yaz'da kelime kutuları oyunun kelime dilinde dinlenir. "Her satıra bir cevap" kutularında
 her dikte yeni satıra yazılır. Öğrencinin cevap verdiği yerlerde yoktur.
 
-- Tarayıcının Web Speech API'si kullanılır: Chrome, Edge, Safari (iOS 14.5+). Firefox'ta düğme görünmez; klavyenin kendi
-  dikte (🎤) tuşu her yerde çalışır. Chrome sesi tanıma için Google'a gönderir; ilk kullanımda mikrofon izni sorulur.
+- Tarayıcının Web Speech API'si kullanılır: Chrome, Edge, Safari (iOS 14.5+). Desteklemeyen tarayıcıda (iPhone'da Chrome, uygulama içi tarayıcılar, Firefox) düğme soluk görünür;
+  basınca klavyenin dikte (🎤) tuşunu ya da başka bir tarayıcıyı önerir. Chrome sesi tanıma için Google'a gönderir; ilk kullanımda mikrofon izni sorulur.
 - Kod: `shared/voice.js` (oyun bir kutunun dilini kendisi seçebilir: `EgidoVoice.langOf = el => 'de' | null`).
 
 ### 6. GitHub Pages

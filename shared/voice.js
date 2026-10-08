@@ -1,7 +1,8 @@
 // Kara Tahta (Egido) — sesle yazma.
 // Öğretmenin soru/cevap kutularına (#setup içi) ve yapay zekâ penceresindeki konu kutusuna (#aiTopic)
 // odaklanınca kutunun sağ ucunda 🎤 + dil etiketi belirir. 🎤'ya basıp konuşulan metin imlecin olduğu yere yazılır.
-// Web Speech API (SpeechRecognition): Chrome, Edge, Safari. Desteklemeyen tarayıcıda (Firefox) hiçbir şey görünmez.
+// Web Speech API (SpeechRecognition): Chrome, Edge, Safari. Desteklemeyen tarayıcıda düğme soluk görünür, basınca
+// klavyenin dikte tuşunu ya da başka tarayıcıyı önerir.
 // Oyun, bazı kutular için dili kendisi seçebilir: EgidoVoice.langOf = el => 'de' | null
 (() => {
   'use strict';
@@ -12,7 +13,7 @@
   const t = (k, v) => (window.I18N ? I18N.t(k, v) : k);
   const api = { ok: !!SR, langOf: null };
   window.EgidoVoice = api;
-  if (!SR) return;
+  // Tanıma yoksa da (iPhone'da Chrome, uygulama içi tarayıcılar, Firefox) düğme görünür; basınca ne yapılacağı söylenir
 
   let target = null, box = null, rec = null, listening = false, hideTimer = null, tipTimer = null, raf = 0;
 
@@ -36,6 +37,7 @@
   function build() {
     box = document.createElement('div'); box.className = 'vx hidden';
     box.innerHTML = '<button type="button" class="vx-mic" aria-label="mic">🎤</button><button type="button" class="vx-lang"></button><div class="vx-tip hidden"></div>';
+    if (!SR) box.classList.add('vx-off');
     document.body.appendChild(box);
     // Kutudaki odak kaybolmasın (mobilde klavye kapanmasın)
     box.addEventListener('mousedown', e => e.preventDefault());
@@ -111,6 +113,7 @@
 
   function start() {
     const el = target; if (!el) return;
+    if (!SR) { tip(t('voice.unsupported'), 8000); return; }
     const v = el.value, a = el.selectionStart != null ? el.selectionStart : v.length, b = el.selectionEnd != null ? el.selectionEnd : v.length;
     const before = v.slice(0, a), after = v.slice(b);
     const sep = !before ? '' : lineMode(el) ? (before.endsWith('\n') ? '' : '\n') : (/\s$/.test(before) ? '' : ' ');

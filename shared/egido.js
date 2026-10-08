@@ -316,17 +316,49 @@ window.Egido = (() => {
     if (!pane) {
       pane = document.createElement('aside'); pane.id = 'previewPane';
       pane.innerHTML = `<div class="pv-head"><span>${t('preview.title')}</span><span class="spacer"></span>
+        <button type="button" class="btn small secondary" id="pvFull"></button>
         <button type="button" class="btn small secondary" id="pvRestart">${t('preview.restart')}</button>
-        <button type="button" class="btn small secondary" id="pvClose">✕</button></div><iframe title="preview"></iframe>`;
+        <button type="button" class="btn small secondary" id="pvClose">✕</button></div><iframe title="preview" allow="fullscreen; autoplay"></iframe>`;
       $('#setup').appendChild(pane);
-      $('#pvClose').onclick = closePreview;
+      $('#pvClose').onclick = () => { setPreviewFull(false); closePreview(); };
       $('#pvRestart').onclick = () => openPreview(readConfig());
+      $('#pvFull').onclick = () => setPreviewFull(!isPreviewFull());
+      paintPreviewFull();
     }
     document.body.classList.add('has-preview');
     const fr = pane.querySelector('iframe');
     fr.onload = () => fr.contentWindow.postMessage({ type: 'egido-preview', cfg: pvCfg }, location.origin);
     fr.src = location.pathname + '?preview=1&_=' + Date.now();
   }
+  // Tam ekran: tarayıcının gerçek tam ekranı; desteklemeyen cihazda (iPhone) bölme CSS ile sayfayı kaplar
+  const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+  const isPreviewFull = () => { const pane = $('#previewPane'); return !!pane && (fsEl() === pane || pane.classList.contains('pv-css-full')); };
+  function setPreviewFull(on) {
+    const pane = $('#previewPane'); if (!pane) return;
+    if (on) {
+      const req = pane.requestFullscreen || pane.webkitRequestFullscreen;
+      const css = () => { pane.classList.add('pv-css-full'); document.body.classList.add('pv-noscroll'); paintPreviewFull(); };
+      if (req) { try { const r = req.call(pane); if (r && r.catch) r.catch(css); } catch (e) { css(); } } else css();
+    } else {
+      if (fsEl() === pane) { const ex = document.exitFullscreen || document.webkitExitFullscreen; if (ex) try { const r = ex.call(document); if (r && r.catch) r.catch(() => {}); } catch (e) {} }
+      pane.classList.remove('pv-css-full'); document.body.classList.remove('pv-noscroll');
+    }
+    paintPreviewFull();
+    const fr = pane.querySelector('iframe'); if (fr) setTimeout(() => { try { fr.focus(); } catch (e) {} }, 100); // klavyeyle oynanan oyunlar için
+  }
+  function paintPreviewFull() {
+    const b = $('#pvFull'); if (!b) return;
+    const on = isPreviewFull(), pane = $('#previewPane');
+    pane.classList.toggle('pv-full', on);
+    b.innerHTML = (on
+      ? '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg> '
+      : '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg> ')
+      + `<span class="pv-full-txt">${t(on ? 'preview.exitFull' : 'preview.full')}</span>`;
+    b.title = t(on ? 'preview.exitFull' : 'preview.full');
+  }
+  ['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, paintPreviewFull));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#previewPane.pv-css-full')) setPreviewFull(false); });
+  document.addEventListener('egido:lang', paintPreviewFull);
   function closePreview() { const pane = $('#previewPane'); if (pane) pane.remove(); document.body.classList.remove('has-preview'); }
   function bootPreview() {
     preview = true; isTeacher = false;
