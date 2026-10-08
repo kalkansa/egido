@@ -257,3 +257,9 @@ body.has-topbar #previewPane { top: 62px; height: calc(100vh - 78px); }
 .ai-manual summary { cursor: pointer; font-weight: 700; font-size: 14px; }
 .ai-manual .row { margin: 8px 0; }
 .ai-warn { margin: 12px 0 0; }
+.ai-howto { margin: 8px 0 4px; background: #f6f8fd; border: 1px solid #e3e9f4; border-radius: 12px; padding: 8px 14px; }
+.ai-howto summary { cursor: pointer; font-weight: 700; font-size: 14px; color: #3b4a6b; }
+.ai-howto ol { margin: 8px 0 10px; padding-left: 22px; font-size: 14px; line-height: 1.55; }
+.ai-howto li { margin: 3px 0; }
+.ai-howto .ai-open { display: inline-block; text-decoration: none; }
+.ai-howto .hint { margin: 10px 0 2px; }

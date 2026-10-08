@@ -252,6 +252,12 @@ Rules:
     }
     box.innerHTML = `<label for="aiKeyIn">${t('ai.keyTitle')}</label>
       <p class="hint">${t('ai.keyHelp')} ${session() ? t('ai.keyDb') : t('ai.keyLocal')}</p>
+      <details class="ai-howto"${key ? '' : ' open'}>
+        <summary>${t('ai.howTitle')}</summary>
+        <ol>${[1, 2, 3, 4, 5].map(i => `<li>${t('ai.how' + i)}</li>`).join('')}</ol>
+        <a class="btn small ai-open" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">${t('ai.howOpen')} ↗</a>
+        <p class="hint">💡 ${t('ai.howNote')}</p>
+      </details>
       <div class="ai-row"><input type="password" id="aiKeyIn" autocomplete="off" spellcheck="false" placeholder="AIza…"><button class="btn secondary" id="aiKeySave">${t('ai.keySave')}</button></div>`;
     $('#aiKeySave').onclick = async () => {
       const k = $('#aiKeyIn').value.trim(); if (!k) return;
