@@ -139,6 +139,7 @@ window.I18N = (() => {
     'canli.missed': 'Bilemediğin sorular:', 'canli.quitConfirm': 'Yarışmadan çıkmak istiyor musun?', 'canli.hostGone': 'Öğretmen yarışmayı kapattı.',
     'canli.ex': 'Hangisi bir gezegendir?;Mars;Güneş;Ay;Kuyruklu yıldız|7 x 8 = ?;56;54;48;64|Hangisi bir sebzedir?;Havuç;Elma;Muz;Kiraz|En büyük okyanus hangisidir?;Pasifik;Atlantik;Hint;Arktik|Bir yılda kaç mevsim vardır?;4;2;3;12',
     // yapay zekâ ile oluştur
+    'voice.title': 'Sesle yaz', 'voice.stop': 'Dinlemeyi durdur', 'voice.lang': 'Dinleme dili (değiştirmek için dokun)', 'voice.langFixed': 'Dil, oyundaki kelime diline göre seçildi', 'voice.listening': '🎙️ Dinliyorum… konuşun', 'voice.noSpeech': 'Ses anlaşılamadı, tekrar deneyin.', 'voice.denied': 'Mikrofon izni verilmedi. Tarayıcı ayarlarından izin verin.', 'voice.noMic': 'Mikrofon bulunamadı.', 'voice.network': 'Ses tanıma için internet bağlantısı gerekiyor.', 'voice.fail': 'Sesle yazma çalışmadı: {e}',
     'ai.btn': '✨ Yapay zekâ ile oluştur', 'ai.title': '✨ Yapay zekâ ile oluştur', 'ai.topic': 'Ne hazırlansın?',
     'ai.topicPh': 'Örn: 3. sınıf öğrencileri için Almanca renkler', 'ai.count': 'Adet', 'ai.gen': 'Oluştur',
     'ai.generating': 'Oluşturuluyor…', 'ai.keyTitle': 'Gemini API anahtarınız', 'ai.keyHelp': 'Ücretsiz anahtarı <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> sayfasından Google hesabınızla alın (kart gerekmez) ve buraya yapıştırın.',
@@ -324,6 +325,7 @@ window.I18N = (() => {
     'canli.missed': 'Questions you missed:', 'canli.quitConfirm': 'Leave the quiz?', 'canli.hostGone': 'The teacher closed the quiz.',
     'canli.ex': 'Which one is a planet?;Mars;Sun;Moon;Comet|7 x 8 = ?;56;54;48;64|Which one is a vegetable?;Carrot;Apple;Banana;Cherry|Which is the largest ocean?;Pacific;Atlantic;Indian;Arctic|How many seasons are in a year?;4;2;3;12',
     // yapay zekâ ile oluştur
+    'voice.title': 'Dictate', 'voice.stop': 'Stop listening', 'voice.lang': 'Listening language (tap to change)', 'voice.langFixed': 'Language follows the game\'s word language', 'voice.listening': '🎙️ Listening… speak now', 'voice.noSpeech': 'Didn\'t catch that, try again.', 'voice.denied': 'Microphone permission denied. Allow it in the browser settings.', 'voice.noMic': 'No microphone found.', 'voice.network': 'Speech recognition needs an internet connection.', 'voice.fail': 'Dictation failed: {e}',
     'ai.btn': '✨ Create with AI', 'ai.title': '✨ Create with AI', 'ai.topic': 'What should be prepared?',
     'ai.topicPh': 'e.g. German colours for 3rd graders', 'ai.count': 'Count', 'ai.gen': 'Create',
     'ai.generating': 'Creating…', 'ai.keyTitle': 'Your Gemini API key', 'ai.keyHelp': 'Get a free key with your Google account at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> (no card needed) and paste it here.',
@@ -504,6 +506,7 @@ window.I18N = (() => {
     'canli.missed': 'Nicht gewusste Fragen:', 'canli.quitConfirm': 'Quiz verlassen?', 'canli.hostGone': 'Die Lehrkraft hat das Quiz beendet.',
     'canli.ex': 'Was ist ein Planet?;Mars;Sonne;Mond;Komet|7 x 8 = ?;56;54;48;64|Was ist ein Gemüse?;Karotte;Apfel;Banane;Kirsche|Welcher Ozean ist der größte?;Pazifik;Atlantik;Indischer;Arktischer|Wie viele Jahreszeiten hat ein Jahr?;4;2;3;12',
     // yapay zekâ ile oluştur
+    'voice.title': 'Diktieren', 'voice.stop': 'Zuhören beenden', 'voice.lang': 'Sprache (zum Ändern tippen)', 'voice.langFixed': 'Sprache folgt der Wortsprache des Spiels', 'voice.listening': '🎙️ Ich höre zu… jetzt sprechen', 'voice.noSpeech': 'Nicht verstanden, bitte erneut versuchen.', 'voice.denied': 'Mikrofonzugriff verweigert. Bitte in den Browsereinstellungen erlauben.', 'voice.noMic': 'Kein Mikrofon gefunden.', 'voice.network': 'Spracherkennung braucht eine Internetverbindung.', 'voice.fail': 'Diktieren fehlgeschlagen: {e}',
     'ai.btn': '✨ Mit KI erstellen', 'ai.title': '✨ Mit KI erstellen', 'ai.topic': 'Was soll erstellt werden?',
     'ai.topicPh': 'z. B. Farben auf Englisch für die 3. Klasse', 'ai.count': 'Anzahl', 'ai.gen': 'Erstellen',
     'ai.generating': 'Wird erstellt…', 'ai.keyTitle': 'Dein Gemini-API-Schlüssel', 'ai.keyHelp': 'Hol dir mit deinem Google-Konto einen kostenlosen Schlüssel bei <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> (keine Karte nötig) und füge ihn hier ein.',
@@ -684,6 +687,7 @@ window.I18N = (() => {
     'canli.missed': 'Preguntas falladas:', 'canli.quitConfirm': '¿Salir del concurso?', 'canli.hostGone': 'El docente cerró el concurso.',
     'canli.ex': '¿Cuál es un planeta?;Marte;Sol;Luna;Cometa|7 x 8 = ?;56;54;48;64|¿Cuál es una verdura?;Zanahoria;Manzana;Plátano;Cereza|¿Cuál es el océano más grande?;Pacífico;Atlántico;Índico;Ártico|¿Cuántas estaciones tiene un año?;4;2;3;12',
     // yapay zekâ ile oluştur
+    'voice.title': 'Dictar', 'voice.stop': 'Dejar de escuchar', 'voice.lang': 'Idioma de escucha (toca para cambiar)', 'voice.langFixed': 'El idioma sigue al idioma de las palabras del juego', 'voice.listening': '🎙️ Escuchando… habla ahora', 'voice.noSpeech': 'No se entendió, inténtalo de nuevo.', 'voice.denied': 'Permiso de micrófono denegado. Permítelo en los ajustes del navegador.', 'voice.noMic': 'No se encontró micrófono.', 'voice.network': 'El reconocimiento de voz necesita conexión a internet.', 'voice.fail': 'El dictado falló: {e}',
     'ai.btn': '✨ Crear con IA', 'ai.title': '✨ Crear con IA', 'ai.topic': '¿Qué quieres preparar?',
     'ai.topicPh': 'Ej.: los colores en alemán para 3.º de primaria', 'ai.count': 'Cantidad', 'ai.gen': 'Crear',
     'ai.generating': 'Creando…', 'ai.keyTitle': 'Tu clave de la API de Gemini', 'ai.keyHelp': 'Consigue una clave gratuita con tu cuenta de Google en <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> (sin tarjeta) y pégala aquí.',

@@ -37,6 +37,7 @@ index.html            Ana sayfa: öğrenci kod girişi + öğretmen girişi + ö
 shared/config.js      Supabase URL ve anon key (tek yer)
 shared/egido.css      Ortak stil
 shared/egido.js       Ortak çekirdek: giriş, kaydet, kod/QR, skor tablosu, Supabase, sesler
+shared/voice.js       Sesle yazma: soru/cevap ve yapay zekâ konu kutularında 🎤
 supabase/schema.sql   Tablolar, RLS kuralları, join_set fonksiyonu
 games/<oyun>/         Her oyun kendi klasöründe, tek index.html
 ```
@@ -86,7 +87,18 @@ Her oyunun kurulum ekranında **✨ Yapay zekâ ile oluştur** butonu var. Öğr
   yanıt geri yapıştırılır.
 - Kod: `shared/ai.js` (`EgidoAI.attach({ kind, nw, read, write })`; türler: mcq, cats, lists, words, sents).
 
-### 5. GitHub Pages
+### 5. Sesle yazma (kurulum gerekmez)
+
+Öğretmen bir soru/cevap kutusuna ya da yapay zekâ penceresindeki konu kutusuna dokununca kutunun sağında **🎤** ve dil etiketi
+(TR/EN/DE/ES) belirir. 🎤'ya basıp konuşulan metin imlecin olduğu yere yazılır; dil etiketine dokununca dinleme dili değişir
+(tarayıcıda hatırlanır). Dinle ve Yaz'da kelime kutuları oyunun kelime dilinde dinlenir. "Her satıra bir cevap" kutularında
+her dikte yeni satıra yazılır. Öğrencinin cevap verdiği yerlerde yoktur.
+
+- Tarayıcının Web Speech API'si kullanılır: Chrome, Edge, Safari (iOS 14.5+). Firefox'ta düğme görünmez; klavyenin kendi
+  dikte (🎤) tuşu her yerde çalışır. Chrome sesi tanıma için Google'a gönderir; ilk kullanımda mikrofon izni sorulur.
+- Kod: `shared/voice.js` (oyun bir kutunun dilini kendisi seçebilir: `EgidoVoice.langOf = el => 'de' | null`).
+
+### 6. GitHub Pages
 
 Depo **public** olmalı (ücretsiz planda Pages yalnızca public depolarda çalışır).
 **Settings → Pages → Build and deployment**: Deploy from a branch, **main**, **/ (root)**.
