@@ -72,7 +72,21 @@ Harf Puzzle ve Kablo Eşleştirme'de resim seçici "Pixabay'de Ara" sekmesi içe
 [pixabay.com](https://pixabay.com) → hesap aç → [API sayfası](https://pixabay.com/api/docs/) → anahtarı kopyala → `shared/config.js` içine `pixabayKey` olarak yaz.
 Arama arayüz dilinde yapılır, güvenli arama açıktır; seçilen resim küçültülüp oyuna gömülür (Pixabay kalıcı hotlink istemez).
 
-### 4. GitHub Pages
+### 4. Yapay zekâ ile oluşturma (Gemini, isteğe bağlı)
+
+Her oyunun kurulum ekranında **✨ Yapay zekâ ile oluştur** butonu var. Öğretmen konuyu yazar
+(örn. "3. sınıf öğrencileri için Almanca renkler"), içerik o oyunun biçiminde forma eklenir; öğretmen kontrol edip kaydeder.
+
+- Her öğretmen kendi ücretsiz anahtarını https://aistudio.google.com/apikey adresinden alır ve pencereye bir kez yapıştırır.
+  Anahtar `teacher_settings` tablosunda saklanır; RLS ile yalnızca sahibi okuyabilir (proje yöneticisi panelden görebilir).
+  Bu tablo için `supabase/schema.sql` yeniden çalıştırılmalı; çalıştırılmamışsa anahtar o tarayıcıda saklanır.
+- Gemini doğrudan öğretmenin tarayıcısından çağrılır, aracı sunucu yok. Ücretsiz katmanda Google gönderilen metni ürün geliştirmede
+  kullanabilir; istemde yalnızca öğretmenin konu cümlesi gider, öğrenci verisi gitmez.
+- Kota dolarsa ya da anahtar yoksa **Anahtarsız yol**: istem kopyalanıp ChatGPT, Gemini ya da Claude sohbetine yapıştırılır,
+  yanıt geri yapıştırılır.
+- Kod: `shared/ai.js` (`EgidoAI.attach({ kind, nw, read, write })`; türler: mcq, cats, lists, words, sents).
+
+### 5. GitHub Pages
 
 Depo **public** olmalı (ücretsiz planda Pages yalnızca public depolarda çalışır).
 **Settings → Pages → Build and deployment**: Deploy from a branch, **main**, **/ (root)**.

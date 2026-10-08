@@ -231,3 +231,29 @@ body.has-topbar #previewPane { top: 62px; height: calc(100vh - 78px); }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .chip { background: #fff; border: 1px solid #e3e8f0; border-radius: 999px; padding: 4px 10px; font-size: 13px; }
 .result .lb-wrap { text-align: left; margin-bottom: 18px; }
+
+/* ---------- Yapay zekâ ile oluştur ---------- */
+.ai-btn { background: linear-gradient(135deg, #7c3aed, #2563eb); color: #fff; margin-left: 8px; }
+.ai-btn:hover { filter: brightness(1.08); }
+.ai-dlg { width: min(600px, 94vw); max-height: 92vh; overflow: auto; }
+.ai-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.ai-head h2 { margin: 0; font-size: 21px; flex: 1; }
+.ai-x { background: none; border: 0; font-size: 20px; cursor: pointer; color: var(--muted); padding: 4px 8px; }
+.ai-dlg textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: 15px; padding: 10px 12px; border: 2px solid #d7deea; border-radius: 10px; outline: none; resize: vertical; }
+.ai-dlg textarea:focus, .ai-dlg input:focus { border-color: var(--bg2); }
+.ai-dlg input[type=password] { flex: 1; min-width: 0; font: inherit; font-size: 15px; padding: 10px 12px; border: 2px solid #d7deea; border-radius: 10px; outline: none; margin: 0; }
+.ai-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.ai-row label { margin: 0; } .ai-row select { width: auto; margin: 0; }
+.ai-row .spacer, .ai-keyok .spacer { flex: 1; }
+.ai-status { min-height: 22px; margin-top: 10px; font-size: 14px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.ai-status.bad { color: var(--bad); }
+.ai-spin { width: 16px; height: 16px; border: 3px solid #c7d2fe; border-top-color: #4f46e5; border-radius: 50%; animation: aispin .8s linear infinite; flex: none; }
+@keyframes aispin { to { transform: rotate(360deg); } }
+.ai-key { margin-top: 8px; padding-top: 10px; border-top: 1px solid #e5eaf2; }
+.ai-key .hint { margin: 4px 0 0; }
+.ai-keyok { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; }
+.ai-keyok code { background: #f1f5fb; border-radius: 6px; padding: 2px 6px; }
+.ai-manual { margin-top: 12px; padding-top: 10px; border-top: 1px solid #e5eaf2; }
+.ai-manual summary { cursor: pointer; font-weight: 700; font-size: 14px; }
+.ai-manual .row { margin: 8px 0; }
+.ai-warn { margin: 12px 0 0; }

@@ -99,6 +99,27 @@ create policy "skor ekle" on public.scores for insert to anon, authenticated wit
 create policy "skor oku"  on public.scores for select to anon, authenticated using (true);
 
 -- ============================================================
+-- Öğretmen ayarları: yapay zekâ (Gemini) anahtarı
+-- ============================================================
+-- Her öğretmen kendi ücretsiz Google AI Studio anahtarını girer; yalnızca kendisi okur/değiştirir.
+-- (Proje yöneticisi tabloyu panelden görebilir; öğretmenler birbirininkini göremez.)
+create table if not exists public.teacher_settings (
+  owner       uuid primary key references auth.users(id) on delete cascade default auth.uid(),
+  gemini_key  text check (gemini_key is null or char_length(gemini_key) between 10 and 200),
+  updated_at  timestamptz not null default now()
+);
+alter table public.teacher_settings enable row level security;
+drop policy if exists "ayar sahibi okur"      on public.teacher_settings;
+drop policy if exists "ayar sahibi ekler"     on public.teacher_settings;
+drop policy if exists "ayar sahibi günceller" on public.teacher_settings;
+drop policy if exists "ayar sahibi siler"     on public.teacher_settings;
+create policy "ayar sahibi okur"      on public.teacher_settings for select to authenticated using (owner = auth.uid());
+create policy "ayar sahibi ekler"     on public.teacher_settings for insert to authenticated with check (owner = auth.uid());
+create policy "ayar sahibi günceller" on public.teacher_settings for update to authenticated using (owner = auth.uid()) with check (owner = auth.uid());
+create policy "ayar sahibi siler"     on public.teacher_settings for delete to authenticated using (owner = auth.uid());
+revoke all on public.teacher_settings from anon;
+
+-- ============================================================
 -- Notlar
 -- ============================================================
 -- Öğretmen hesapları: Authentication → Providers → Email açık olmalı.
